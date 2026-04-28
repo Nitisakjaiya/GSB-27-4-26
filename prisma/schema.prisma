@@ -71,17 +71,48 @@ model tb_committees {
   @@index([base_type, base_id])
 }
 
-// 5.สำหรับเก็บข้อมูลไฟล์ 
 model tb_files {
   file_aid     BigInt   @id @default(autoincrement())
   base_type    String   @db.VarChar(10) // 'CON' หรือ 'PLAN'
   base_id      BigInt
   file_name    String   @db.NVarChar(255)
-  file_path    String   @db.NVarChar(500) // Key ที่เก็บใน MinIO
+  file_path    String   @db.NVarChar(500) // Path ใน MinIO เช่น CON/10006/contract.pdf
   file_size    Int?
   mime_type    String?  @db.VarChar(100)
   created_at   DateTime @default(now())
   is_deleted   Int      @default(0) @db.TinyInt
 
   @@index([base_type, base_id])
+}
+
+// --- Phase 3: Planning Models ---
+
+model tb_planning {
+  pl_aid           BigInt    @id @default(autoincrement())
+  ref_contract_id  BigInt?   // เชื่อมโยงกลับไปที่สัญญาต้นทาง
+  pl_number        String?   @db.NVarChar(20)
+  pl_name          String?   @db.NVarChar(300)
+  pl_year          Int?      
+  status           String?   @db.VarChar(20) @default("DRAFT")
+  
+  items            tb_planning_items[]
+  
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  is_deleted       Int       @default(0) @db.TinyInt
+
+  @@index([ref_contract_id])
+}
+
+model tb_planning_items {
+  pli_aid          BigInt    @id @default(autoincrement())
+  planning_id      BigInt
+  pli_type         String?   @db.NVarChar(20)
+  pli_description  String?   @db.NVarChar(500)
+  pli_budget       Decimal?  @db.Decimal(18, 2)
+  
+  planning         tb_planning @relation(fields: [planning_id], references: [pl_aid])
+
+  created_at       DateTime  @default(now())
+  is_deleted       Int       @default(0) @db.TinyInt
 }
