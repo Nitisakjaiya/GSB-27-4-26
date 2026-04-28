@@ -51,3 +51,15 @@ export async function createContract(formData: FormData) {
   revalidatePath("/dashboard") 
   redirect("/dashboard")
 }
+export async function deleteContract(id: bigint) {
+  try {
+    await prisma.tb_contract.update({
+      where: { ct_aid: id },
+      data: { is_deleted: 1 }, // เปลี่ยนสถานะเป็นลบ
+    });
+    revalidatePath("/dashboard"); // ล้างแคชหน้าจอ
+  } catch (error) {
+    console.error("Delete Error:", error);
+    throw new Error("ไม่สามารถลบสัญญาได้");
+  }
+}
