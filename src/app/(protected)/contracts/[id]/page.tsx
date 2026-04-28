@@ -6,32 +6,40 @@ import {
   Calendar, 
   BadgeDollarSign, 
   Briefcase,
-  ShieldCheck
+  ShieldCheck,
+  Users,
+  Plus,
+  Trash2
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { addCommittee, deleteCommittee } from "../actions";
 
-// กำหนด Type ของ params ให้เป็น Promise ตามมาตรฐาน Next.js 15/16
 export default async function ContractDetailPage({ 
   params 
 }: { 
   params: Promise<{ id: string }> 
 }) {
   
-  // 1. แกะค่า ID ออกมาจาก Promise (Unwrap params)
+  // 1. แกะค่า ID ออกมาจาก Promise
   const { id } = await params;
 
-  // 2. ดึงข้อมูลสัญญาตัวจริง พร้อมรายการย่อย (Items)
+  // 2. ดึงข้อมูลสัญญาและรายการย่อย
   const contract = await prisma.tb_contract.findUnique({
-    where: { 
-      ct_aid: BigInt(id) 
-    },
-    include: { 
-      items: true 
-    }
+    where: { ct_aid: BigInt(id) },
+    include: { items: true }
   });
 
-  // 3. เช็คความปลอดภัย: ถ้าไม่เจอ หรือถูก Soft Delete (is_deleted: 1) ให้ขึ้น 404
+  // 3. ดึงรายชื่อกรรมการที่ผูกกับสัญญานี้ (base_type: 'CON') และยังไม่ถูกลบ
+  const committees = await prisma.tb_committees.findMany({
+    where: { 
+      base_id: BigInt(id),
+      base_type: 'CON',
+      is_deleted: 0
+    },
+    orderBy: { created_at: 'asc' }
+  });
+
   if (!contract || contract.is_deleted === 1) {
     notFound();
   }
@@ -48,13 +56,12 @@ export default async function ContractDetailPage({
         <span className="text-sm font-medium">กลับไปหน้าภาพรวมระบบ</span>
       </Link>
 
-      <div className="bg-gray-900 rounded-[2.5rem] border border-gray-800 shadow-2xl overflow-hidden relative">
-        {/* แถบสีตกแต่งด้านบน (Sky Blue Gradient) */}
+      <div className="bg-gray-900 rounded-[2.5rem] border border-gray-800 shadow-2xl overflow-hidden relative mb-12">
         <div className="h-2 w-full bg-gradient-to-r from-[#0EA5E9] to-blue-700"></div>
 
         <div className="p-10 md:p-12">
           
-          {/* --- ส่วนหัวข้อสัญญา (Header Section) --- */}
+          {/* --- ส่วนหัวข้อสัญญา --- */}
           <div className="flex flex-col lg:flex-row justify-between items-start gap-8 mb-12">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-5">
@@ -73,14 +80,9 @@ export default async function ContractDetailPage({
                   <FileText size={16} className="text-[#38BDF8]" />
                   <span className="text-sm font-medium">เลขที่สัญญา: <b className="text-gray-200">{contract.ct_number}</b></span>
                 </div>
-                <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl border border-white/5">
-                  <ShieldCheck size={16} className="text-green-500" />
-                  <span className="text-sm font-medium text-gray-200 font-mono italic">CTMNG_VERIFIED</span>
-                </div>
               </div>
             </div>
             
-            {/* กล่องสถานะ (Status Box) */}
             <div className="bg-black/40 p-8 rounded-[2rem] border border-gray-800 min-w-[280px] backdrop-blur-md">
                <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-4">Current Status</p>
                <div className="flex items-center gap-4">
@@ -90,15 +92,14 @@ export default async function ContractDetailPage({
                   </div>
                   <span className="text-2xl font-bold text-white tracking-tight">เปิดใช้งานปกติ</span>
                </div>
-               <p className="text-xs text-gray-500 mt-3 italic font-light">* ข้อมูลถูกดึงจาก SQL Server ล่าสุด</p>
             </div>
           </div>
 
-          {/* --- รายละเอียดผู้รับผิดชอบ (Info Cards) --- */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-14">
-            <div className="p-8 bg-white/[0.03] rounded-[2rem] border border-white/5 hover:border-[#0EA5E9]/40 transition-all group shadow-inner">
+          {/* --- รายละเอียดผู้รับผิดชอบ --- */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-14 border-b border-gray-800 pb-14">
+            <div className="p-8 bg-white/[0.03] rounded-[2rem] border border-white/5 shadow-inner">
               <div className="flex items-center gap-5">
-                <div className="p-4 bg-[#0EA5E9]/20 rounded-2xl group-hover:scale-110 transition-transform">
+                <div className="p-4 bg-[#0EA5E9]/20 rounded-2xl">
                   <User className="text-[#38BDF8]" size={28} />
                 </div>
                 <div>
@@ -125,7 +126,75 @@ export default async function ContractDetailPage({
             </div>
           </div>
 
-          {/* --- ตารางรายการย่อย (Items Master-Detail) --- */}
+          {/* --- ส่วนจัดการคณะกรรมการ (Task 2.7) --- */}
+          <div className="mb-14">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-[#0EA5E9]/10 rounded-lg">
+                  <Users className="text-[#0EA5E9]" size={28} />
+                </div>
+                <h3 className="text-2xl font-bold text-white tracking-tight italic">คณะกรรมการตรวจรับพัสดุ</h3>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+              {committees.map((member) => (
+                <div 
+                  key={member.cmit_aid.toString()} 
+                  className="flex items-center justify-between p-5 bg-white/[0.02] rounded-2xl border border-white/5 hover:border-[#0EA5E9]/40 transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-[#38BDF8] font-bold border border-gray-700">
+                      {member.cmit_name?.substring(0, 1)}
+                    </div>
+                    <div>
+                      <p className="text-white font-bold text-sm">{member.cmit_name}</p>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider">{member.cmit_position || 'กรรมการ'}</p>
+                    </div>
+                  </div>
+                  <form action={deleteCommittee}>
+                    <input type="hidden" name="cmit_aid" value={member.cmit_aid.toString()} />
+                    <input type="hidden" name="base_id" value={id} />
+                    <button type="submit" className="text-gray-600 hover:text-red-500 p-2 transition-colors">
+                      <Trash2 size={16} />
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
+
+            {/* ฟอร์มเพิ่มกรรมการใหม่ */}
+            <form action={addCommittee} className="bg-black/40 p-6 rounded-3xl border border-dashed border-gray-800 flex flex-col md:flex-row gap-4">
+              <input type="hidden" name="base_id" value={id} />
+              <div className="flex-1">
+                <input 
+                  name="cmit_name" 
+                  placeholder="ชื่อ-นามสกุล คณะกรรมการ" 
+                  required 
+                  className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-[#0EA5E9] outline-none transition-all text-sm"
+                />
+              </div>
+              <div className="w-full md:w-64">
+                <select 
+                  name="cmit_position" 
+                  className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-[#0EA5E9] outline-none transition-all text-sm"
+                >
+                  <option value="กรรมการ">กรรมการ</option>
+                  <option value="ประธานกรรมการ">ประธานกรรมการ</option>
+                  <option value="กรรมการและเลขานุการ">กรรมการและเลขานุการ</option>
+                </select>
+              </div>
+              <button 
+                type="submit" 
+                className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white font-bold rounded-xl px-8 py-3 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={18} />
+                <span className="text-sm">เพิ่มรายชื่อ</span>
+              </button>
+            </form>
+          </div>
+
+          {/* --- ตารางรายการย่อย --- */}
           <div className="space-y-8">
             <div className="flex items-center justify-between border-b border-gray-800 pb-6">
               <div className="flex items-center gap-4">
@@ -134,11 +203,11 @@ export default async function ContractDetailPage({
                 </div>
                 <h3 className="text-2xl font-bold text-white tracking-tight italic">งบประมาณและรายการอุปกรณ์</h3>
               </div>
-              <span className="text-gray-500 text-xs font-medium">จำนวน {contract.items.length} รายการ</span>
+              <span className="text-gray-500 text-xs font-medium uppercase tracking-widest">Total {contract.items.length} Items</span>
             </div>
 
             <div className="bg-black/50 rounded-[2rem] border border-gray-800 overflow-hidden shadow-inner">
-              <table className="w-full text-left">
+              <table className="w-full text-left text-sm">
                 <thead className="bg-gray-800/80 text-[10px] text-gray-400 uppercase tracking-[0.25em] font-black">
                   <tr>
                     <th className="px-10 py-6">ประเภท</th>
@@ -154,36 +223,21 @@ export default async function ContractDetailPage({
                           <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center group-hover:bg-[#0EA5E9]/20 transition-colors">
                             <Briefcase size={14} className="text-[#38BDF8]" />
                           </div>
-                          <span className="font-bold text-white text-lg tracking-tight">{item.item_type}</span>
+                          <span className="font-bold text-white text-base tracking-tight">{item.item_type}</span>
                         </div>
                       </td>
-                      <td className="px-10 py-8 text-gray-400 group-hover:text-gray-200 transition-colors leading-relaxed text-sm">
+                      <td className="px-10 py-8 text-gray-400 group-hover:text-gray-200 transition-colors leading-relaxed">
                         {item.item_agreement}
                       </td>
                       <td className="px-10 py-8 text-right">
-                        <span className="text-3xl font-black text-white font-mono tracking-tighter">
+                        <span className="text-2xl font-black text-white font-mono tracking-tighter">
                           {Number(item.item_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
                       </td>
                     </tr>
                   ))}
-                  
-                  {contract.items.length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="px-10 py-16 text-center text-gray-600 font-medium italic">
-                        --- ไม่พบข้อมูลรายการงบประมาณย่อย ---
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
-            </div>
-            
-            {/* Footer Summary (Optional) */}
-            <div className="flex justify-end p-4">
-               <p className="text-gray-600 text-[10px] uppercase font-bold tracking-widest">
-                  End of Contract Details Report
-               </p>
             </div>
           </div>
 
