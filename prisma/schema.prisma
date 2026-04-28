@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+// 1. ตารางพนักงาน (ตามไฟล์ Authentication)
+model tb_user {
+  user_aid   BigInt   @id @default(autoincrement())
+  username   String   @unique @db.VarChar(50)
+  password   String   @db.VarChar(255)
+  first_name String?  @db.NVarChar(100)
+  last_name  String?  @db.NVarChar(100)
+  
+  created_at DateTime @default(now())
+  is_deleted Int      @default(0) @db.TinyInt // Soft Delete Pattern
+}
+
+// 2. ตารางสัญญาหลัก (อ้างอิงจาก database.xlsx)
+model tb_contract {
+  ct_aid           BigInt    @id @default(autoincrement())
+  category_code    String?   @db.NVarChar(20)
+  ct_number        String?   @db.NVarChar(20)
+  ct_date          DateTime? @db.Date
+  ct_name          String?   @db.NVarChar(300)
+  coordinator_name String?   @db.NVarChar(300)
+  sign_date        DateTime? @db.Date
+  
+  // ความสัมพันธ์ไปหาตารางรายการย่อย
+  items            tb_contract_items[]
+
+  created_at DateTime @default(now())
+  created_by BigInt?
+  updated_at DateTime @updatedAt
+  is_deleted Int      @default(0) @db.TinyInt
+
+  @@index([is_deleted])
+}
+
+// 3. ตารางรายการย่อย (MA / ซื้อใหม่ / ทดแทน)
+model tb_contract_items {
+  item_autoid      BigInt    @id @default(autoincrement())
+  contract_id      BigInt
+  item_type        String?   @db.NVarChar(20) // งานซื้อ / ค่าเช่า / MA
+  item_agreement   String?   @db.NVarChar(500)
+  start_date       DateTime? @db.Date
+  end_date         DateTime? @db.Date
+  item_cost        Decimal?  @db.Decimal(10, 2)
+
+  contract         tb_contract @relation(fields: [contract_id], references: [ct_aid])
+
+  created_at DateTime @default(now())
+  is_deleted Int      @default(0) @db.TinyInt
+}
+
+// 4. ตารางคณะกรรมการ (ใช้แบบ Polymorphic ตามสเปคพี่เลี้ยง)
+model tb_committees {
+  cmit_aid      BigInt  @id @default(autoincrement())
+  base_type     String  @db.VarChar(10) // 'CON' สำหรับสัญญา, 'PLAN' สำหรับแผนงาน
+  base_id       BigInt
+  cmit_name     String? @db.NVarChar(200)
+  cmit_position String? @db.NVarChar(100)
+  cmit_unit     String? @db.NVarChar(100)
+
+  created_at DateTime @default(now())
+  is_deleted Int      @default(0) @db.TinyInt
+
+  @@index([base_type, base_id])
+}
