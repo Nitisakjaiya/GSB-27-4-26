@@ -192,3 +192,36 @@ export async function getDownloadUrl(filePath: string) {
   // สร้างลิงก์ที่มีอายุ 1 ชั่วโมง (3600 วินาที)
   return await minioClient.presignedGetObject(BUCKET_NAME, filePath, 3600);
 }
+
+// เพิ่มต่อท้ายใน actions.ts
+
+export async function updateContract(formData: FormData) {
+  const id = formData.get("id") as string;
+  const category_code = formData.get("category_code") as string;
+  const ct_number = formData.get("ct_number") as string;
+  const ct_name = formData.get("ct_name") as string;
+  const coordinator_name = formData.get("coordinator_name") as string;
+
+  try {
+    await prisma.tb_contract.update({
+      where: { ct_aid: BigInt(id) },
+      data: {
+        category_code: formData.get("category_code") as string,
+        ct_number: formData.get("ct_number") as string,
+        ct_name: formData.get("ct_name") as string,
+        coordinator_name: formData.get("coordinator_name") as string,
+      },
+    });
+
+    // ✅ แก้จุดที่ 1: revalidatePath ไม่ต้องมี (protected)
+    revalidatePath(`/contracts/${id}`);
+    revalidatePath("/dashboard");
+
+  } catch (error) {
+    console.error("Update Error:", error);
+    throw new Error("Update failed");
+  }
+
+  // ✅ แก้จุดที่ 2: redirect ไปที่ URL จริง (ไม่มีวงเล็บ)
+  redirect(`/contracts/${id}`); 
+}
