@@ -1,5 +1,6 @@
 'use server'
 
+import { minioClient, BUCKET_NAME } from "../../../lib/minio";
 import { prisma } from "../../../lib/prisma"
 import { auth } from "../../../auth"
 import { redirect } from "next/navigation"
@@ -125,4 +126,69 @@ export async function deleteCommittee(formData: FormData) {
     console.error("Delete Committee Error:", error);
     throw new Error("ไม่สามารถลบรายชื่อกรรมการได้");
   }
+}
+
+// --- สำหรับจัดการไฟล์ ---
+
+export async function uploadFile(formData: FormData) {
+  const file = formData.get("file") as File;
+  const base_id = formData.get("base_id") as string;
+  const base_type = "CON";
+
+  if (!file || file.size === 0) return;
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const fileName = `${Date.now()}-${file.name}`;
+  const filePath = `${base_type}/${base_id}/${fileName}`;
+
+  try {
+    // 1. ส่งไฟล์ไปที่ MinIO
+    await minioClient.putObject(BUCKET_NAME, filePath, buffer, file.size, {
+        'Content-Type': file.type,
+    });
+
+    // 2. บันทึก Metadata ลง SQL Server
+    await prisma.tb_files.create({
+      data: {
+        base_type,
+        base_id: BigInt(base_id),
+        file_name: file.name,
+        file_path: filePath,
+        file_size: file.size,
+        mime_type: file.type,
+      },
+    });
+
+    revalidatePath(`/(protected)/contracts/${base_id}`);
+  } catch (error) {
+    console.error("🔥 Upload Error:", error);
+    throw new Error("อัปโหลดไม่สำเร็จ");
+  }
+}
+
+export async function deleteFile(formData: FormData) {
+  const file_aid = formData.get("file_aid") as string;
+  const base_id = formData.get("base_id") as string;
+  const filePath = formData.get("file_path") as string;
+
+  try {
+    // 1. ลบจาก MinIO (ลบจริง)
+    await minioClient.removeObject(BUCKET_NAME, filePath);
+    
+    // 2. Soft Delete ใน Database
+    await prisma.tb_files.update({
+      where: { file_aid: BigInt(file_aid) },
+      data: { is_deleted: 1 }
+    });
+
+    revalidatePath(`/(protected)/contracts/${base_id}`);
+  } catch (error) {
+    console.error("🔥 Delete File Error:", error);
+  }
+}
+
+// เพิ่มใน actions.ts
+export async function getDownloadUrl(filePath: string) {
+  // สร้างลิงก์ที่มีอายุ 1 ชั่วโมง (3600 วินาที)
+  return await minioClient.presignedGetObject(BUCKET_NAME, filePath, 3600);
 }
