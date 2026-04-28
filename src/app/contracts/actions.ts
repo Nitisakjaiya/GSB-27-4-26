@@ -51,15 +51,37 @@ export async function createContract(formData: FormData) {
   revalidatePath("/dashboard") 
   redirect("/dashboard")
 }
-export async function deleteContract(id: bigint) {
+
+// แก้ไขเฉพาะฟังก์ชัน deleteContract นะครับ ส่วนอื่นคงเดิมไว้
+export async function deleteContract(formData: FormData) { // 👈 เปลี่ยนจาก id: bigint เป็น formData: FormData
+  // 1. ดึงค่า ID ที่ซ่อนอยู่ใน input name="id"
+  const idStr = formData.get("id") as string;
+
+  if (!idStr) {
+    console.error("❌ หา ID ไม่เจอใน FormData");
+    return;
+  }
+
   try {
+    console.log(`👉 กำลังทำ Soft Delete สัญญา ID: ${idStr}`);
+
+    // 2. แปลง String เป็น BigInt ก่อนส่งให้ Prisma
     await prisma.tb_contract.update({
-      where: { ct_aid: id },
-      data: { is_deleted: 1 }, // เปลี่ยนสถานะเป็นลบ
+      where: { 
+        ct_aid: BigInt(idStr) 
+      },
+      data: { 
+        is_deleted: 1 
+      },
     });
-    revalidatePath("/dashboard"); // ล้างแคชหน้าจอ
+
+    console.log(`✅ ลบสัญญาสำเร็จ!`);
+    
+    // 3. สั่งให้ Dashboard รีเฟรชข้อมูลใหม่
+    revalidatePath("/dashboard");
+
   } catch (error) {
-    console.error("Delete Error:", error);
+    console.error("🔥 Delete Error Details:", error);
     throw new Error("ไม่สามารถลบสัญญาได้");
   }
 }
