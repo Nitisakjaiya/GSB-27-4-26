@@ -13,3 +13,4 @@ export default function Providers({
   // เอา session ที่ได้จากหลังบ้านมาใส่ให้ Provider เลย
   return <SessionProvider session={session}>{children}</SessionProvider>;
 }
+ 
