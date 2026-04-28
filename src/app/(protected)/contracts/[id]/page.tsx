@@ -2,11 +2,11 @@ import { prisma } from "../../../../lib/prisma";
 import { 
   ArrowLeft, FileText, User, Calendar, BadgeDollarSign, 
   Briefcase, Users, Plus, Trash2, ShieldCheck,
-  HardDrive, FileUp, File, Download
+  HardDrive, FileUp, File, Download, Edit3
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-// Import Actions ทั้งหมดที่เราทำไว้
+// Import Actions
 import { 
   addCommittee, 
   deleteCommittee, 
@@ -20,7 +20,7 @@ export default async function ContractDetailPage({
 }: { 
   params: Promise<{ id: string }> 
 }) {
-  // 1. แกะค่า ID
+  // 1. แกะค่า ID จาก Promise (Next.js 16 Standard)
   const { id } = await params;
 
   // 2. ดึงข้อมูลสัญญา + รายการย่อย
@@ -37,7 +37,7 @@ export default async function ContractDetailPage({
     orderBy: { created_at: 'asc' }
   });
 
-  // 4. ดึงรายการไฟล์จากฐานข้อมูล
+  // 4. ดึงรายการไฟล์
   const files = await prisma.tb_files.findMany({
     where: { base_id: BigInt(id), base_type: 'CON', is_deleted: 0 },
     orderBy: { created_at: 'desc' }
@@ -46,11 +46,22 @@ export default async function ContractDetailPage({
   return (
     <div className="p-8 max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
       
-      {/* --- ปุ่มย้อนกลับ --- */}
-      <Link href="/dashboard" className="flex items-center gap-2 text-gray-500 hover:text-[#38BDF8] mb-8 transition-all group w-fit">
-        <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> 
-        <span className="text-sm font-medium">กลับไปหน้าภาพรวมระบบ</span>
-      </Link>
+      {/* --- ส่วนนำทาง (Navigation) --- */}
+      <div className="flex justify-between items-center mb-8">
+        <Link href="/dashboard" className="flex items-center gap-2 text-gray-500 hover:text-[#38BDF8] transition-all group">
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> 
+          <span className="text-sm font-medium">กลับไปหน้าภาพรวมระบบ</span>
+        </Link>
+
+        {/* ✏️ ปุ่มแก้ไขสัญญา (Task 2.4) */}
+        <Link 
+          href={`/contracts/${id}/edit`}
+          className="flex items-center gap-2 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black px-5 py-2 rounded-xl border border-amber-500/20 transition-all text-sm font-bold shadow-lg shadow-amber-500/5"
+        >
+          <Edit3 size={16} />
+          แก้ไขข้อมูลสัญญา
+        </Link>
+      </div>
 
       <div className="bg-gray-900 rounded-[2.5rem] border border-gray-800 shadow-2xl overflow-hidden relative">
         <div className="h-2 w-full bg-gradient-to-r from-[#0EA5E9] to-blue-700"></div>
@@ -71,42 +82,50 @@ export default async function ContractDetailPage({
                 <FileText size={16} /> <span>Ref No: {contract.ct_number}</span>
               </div>
             </div>
-            <div className="bg-black/40 p-8 rounded-[2rem] border border-gray-800 min-w-[280px]">
+            <div className="bg-black/40 p-8 rounded-[2rem] border border-gray-800 min-w-[280px] backdrop-blur-md">
                <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-4">Status</p>
                <div className="flex items-center gap-4">
                   <div className="w-4 h-4 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-2xl font-bold text-white">เปิดใช้งานปกติ</span>
+                  <span className="text-2xl font-bold text-white tracking-tight">เปิดใช้งานปกติ</span>
                </div>
+               <p className="text-[9px] text-gray-600 mt-4 uppercase font-bold italic">CTMNG_SECURE_CLOUD</p>
             </div>
           </div>
 
+          {/* --- Section 2: Info Cards --- */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-14">
-            <div className="p-8 bg-white/[0.03] rounded-3xl border border-white/5 shadow-inner">
+            <div className="p-8 bg-white/[0.03] rounded-3xl border border-white/5 shadow-inner group hover:border-[#38BDF8]/30 transition-all">
               <p className="text-[11px] text-gray-500 uppercase font-black tracking-widest mb-3">ผู้ประสานงาน</p>
               <div className="flex items-center gap-4 text-2xl text-white font-bold tracking-tight">
-                <User className="text-[#38BDF8]" size={24} /> {contract.coordinator_name}
+                <div className="p-3 bg-[#0EA5E9]/10 rounded-xl text-[#38BDF8]">
+                  <User size={24} />
+                </div> 
+                {contract.coordinator_name}
               </div>
             </div>
-            <div className="p-8 bg-white/[0.03] rounded-3xl border border-white/5 shadow-inner">
+            <div className="p-8 bg-white/[0.03] rounded-3xl border border-white/5 shadow-inner group hover:border-[#38BDF8]/30 transition-all">
               <p className="text-[11px] text-gray-500 uppercase font-black tracking-widest mb-3">วันที่เริ่มบันทึก</p>
               <div className="flex items-center gap-4 text-2xl text-white font-bold tracking-tight">
-                <Calendar className="text-[#38BDF8]" size={24} /> {contract.created_at.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
+                <div className="p-3 bg-[#0EA5E9]/10 rounded-xl text-[#38BDF8]">
+                  <Calendar size={24} /> 
+                </div>
+                {contract.created_at.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
               </div>
             </div>
           </div>
 
-          {/* --- Section 2: คณะกรรมการ (Committee) --- */}
+          {/* --- Section 3: คณะกรรมการ (Committee) --- */}
           <div className="mb-14 space-y-8">
             <div className="flex items-center gap-4 border-b border-gray-800 pb-6">
               <Users className="text-[#0EA5E9]" size={28} />
               <h3 className="text-2xl font-bold text-white italic">คณะกรรมการตรวจรับพัสดุ</h3>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {committees.map((member) => (
-                <div key={member.cmit_aid.toString()} className="flex items-center justify-between p-5 bg-white/[0.02] rounded-2xl border border-white/5 group">
+                <div key={member.cmit_aid.toString()} className="flex items-center justify-between p-5 bg-white/[0.02] rounded-2xl border border-white/5 group hover:border-[#38BDF8]/20 transition-all">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-[#38BDF8] font-bold border border-gray-700">
+                    <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-[#38BDF8] font-bold border border-gray-700 group-hover:scale-110 transition-transform">
                       {member.cmit_name?.substring(0, 1)}
                     </div>
                     <div>
@@ -117,7 +136,7 @@ export default async function ContractDetailPage({
                   <form action={deleteCommittee}>
                     <input type="hidden" name="cmit_aid" value={member.cmit_aid.toString()} />
                     <input type="hidden" name="base_id" value={id} />
-                    <button type="submit" className="text-gray-600 hover:text-red-500 p-2"><Trash2 size={16} /></button>
+                    <button type="submit" className="text-gray-600 hover:text-red-500 p-2 transition-colors"><Trash2 size={16} /></button>
                   </form>
                 </div>
               ))}
@@ -125,18 +144,19 @@ export default async function ContractDetailPage({
 
             <form action={addCommittee} className="bg-black/40 p-6 rounded-3xl border border-dashed border-gray-800 flex flex-col md:flex-row gap-4">
               <input type="hidden" name="base_id" value={id} />
-              <input name="cmit_name" placeholder="ชื่อ-นามสกุล" required className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-[#0EA5E9] outline-none text-sm" />
-              <select name="cmit_position" className="md:w-64 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-[#0EA5E9] outline-none text-sm">
+              <input name="cmit_name" placeholder="ชื่อ-นามสกุล" required className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-[#0EA5E9] outline-none text-sm transition-all" />
+              <select name="cmit_position" className="md:w-64 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-[#0EA5E9] outline-none text-sm cursor-pointer">
                 <option value="กรรมการ">กรรมการ</option>
                 <option value="ประธานกรรมการ">ประธานกรรมการ</option>
+                <option value="กรรมการและเลขานุการ">กรรมการและเลขานุการ</option>
               </select>
-              <button type="submit" className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white font-bold rounded-xl px-8 py-3 flex items-center justify-center gap-2 transition-all">
+              <button type="submit" className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white font-bold rounded-xl px-8 py-3 flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#0EA5E9]/20">
                 <Plus size={18} /> เพิ่มชื่อ
               </button>
             </form>
           </div>
 
-          {/* --- Section 3: เอกสารแนบสัญญา (MinIO - Task 2.9) --- */}
+          {/* --- Section 4: เอกสารแนบสัญญา (MinIO) --- */}
           <div className="mb-14 space-y-8">
             <div className="flex items-center gap-4 border-b border-gray-800 pb-6">
               <HardDrive className="text-[#0EA5E9]" size={28} />
@@ -149,38 +169,40 @@ export default async function ContractDetailPage({
                 return (
                   <div key={file.file_aid.toString()} className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-white/5 hover:bg-white/[0.05] transition-all group">
                     <div className="flex items-center gap-4">
-                      <div className="p-3 bg-gray-800 rounded-xl text-[#38BDF8]"><File size={20} /></div>
+                      <div className="p-3 bg-gray-800 rounded-xl text-[#38BDF8] group-hover:bg-[#38BDF8]/10 transition-colors"><File size={20} /></div>
                       <div>
-                        <p className="text-sm font-bold text-white">{file.file_name}</p>
+                        <p className="text-sm font-bold text-white group-hover:text-[#38BDF8] transition-colors">{file.file_name}</p>
                         <p className="text-[10px] text-gray-500 uppercase italic">{(Number(file.file_size || 0) / 1024 / 1024).toFixed(2)} MB • {file.created_at.toLocaleDateString('th-TH')}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <a href={downloadUrl} target="_blank" className="p-2 text-gray-400 hover:text-[#38BDF8]"><Download size={18} /></a>
+                      <a href={downloadUrl} target="_blank" className="p-2 text-gray-400 hover:text-[#38BDF8] transition-colors" title="Download"><Download size={18} /></a>
                       <form action={deleteFile}>
-                        <input type="hidden" name="file_aid" value={file.file_aid.toString()} /><input type="hidden" name="base_id" value={id} /><input type="hidden" name="file_path" value={file.file_path} />
-                        <button type="submit" className="p-2 text-gray-600 hover:text-red-500"><Trash2 size={18} /></button>
+                        <input type="hidden" name="file_aid" value={file.file_aid.toString()} />
+                        <input type="hidden" name="base_id" value={id} />
+                        <input type="hidden" name="file_path" value={file.file_path} />
+                        <button type="submit" className="p-2 text-gray-600 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
                       </form>
                     </div>
                   </div>
                 );
               })}
-              {files.length === 0 && <div className="py-10 text-center border-2 border-dashed border-gray-800 rounded-3xl text-gray-600 italic">ยังไม่มีเอกสารแนบ</div>}
+              {files.length === 0 && <div className="py-12 text-center border-2 border-dashed border-gray-800 rounded-3xl text-gray-600 italic">ยังไม่มีเอกสารแนบในโครงการนี้</div>}
             </div>
 
             <form action={uploadFile} className="bg-[#0EA5E9]/5 p-6 rounded-3xl border border-[#0EA5E9]/20 flex flex-col md:flex-row items-center gap-4">
               <input type="hidden" name="base_id" value={id} />
-              <label className="flex-1 w-full flex items-center justify-center h-12 px-4 bg-gray-900 border-2 border-gray-700 border-dashed rounded-xl cursor-pointer hover:border-[#0EA5E9]">
-                <span className="text-sm text-gray-400 flex items-center gap-2"><FileUp size={20} /> คลิกเพื่อเลือกไฟล์...</span>
+              <label className="flex-1 w-full flex items-center justify-center h-12 px-4 bg-gray-900 border-2 border-gray-700 border-dashed rounded-xl cursor-pointer hover:border-[#0EA5E9] transition-all group">
+                <span className="text-sm text-gray-400 flex items-center gap-2 group-hover:text-white transition-colors"><FileUp size={20} /> คลิกเพื่อเลือกไฟล์ประกอบสัญญา...</span>
                 <input type="file" name="file" className="hidden" required />
               </label>
-              <button type="submit" className="w-full md:w-auto px-10 h-12 bg-[#0EA5E9] hover:bg-[#0284C7] text-white font-black rounded-xl transition-all shadow-lg shadow-[#0EA5E9]/20">
-                อัปโหลดไฟล์
+              <button type="submit" className="w-full md:w-auto px-10 h-12 bg-[#0EA5E9] hover:bg-[#0284C7] text-white font-black rounded-xl transition-all shadow-lg shadow-[#0EA5E9]/20 flex items-center justify-center gap-2">
+                <FileUp size={18} /> อัปโหลดไฟล์
               </button>
             </form>
           </div>
 
-          {/* --- Section 4: งบประมาณ (Items) --- */}
+          {/* --- Section 5: งบประมาณ (Items) --- */}
           <div className="space-y-8">
             <div className="flex items-center gap-4 border-b border-gray-800 pb-6">
               <BadgeDollarSign className="text-[#0EA5E9]" size={28} />
@@ -189,18 +211,29 @@ export default async function ContractDetailPage({
             <div className="bg-black/50 rounded-[2rem] border border-gray-800 overflow-hidden shadow-inner">
               <table className="w-full text-left text-sm">
                 <thead className="bg-gray-800/80 text-[10px] text-gray-400 uppercase tracking-widest font-black">
-                  <tr><th className="px-10 py-6">ประเภท</th><th className="px-10 py-6">รายละเอียด</th><th className="px-10 py-6 text-right">จำนวนเงิน (บาท)</th></tr>
+                  <tr>
+                    <th className="px-10 py-6">ประเภทรายการ</th>
+                    <th className="px-10 py-6">รายละเอียดข้อตกลง</th>
+                    <th className="px-10 py-6 text-right">จำนวนเงิน (บาท)</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800/50">
                   {contract.items.map((item) => (
-                    <tr key={item.item_autoid.toString()} className="hover:bg-[#0EA5E9]/5 transition-colors">
-                      <td className="px-10 py-8 font-bold text-white italic"><div className="flex items-center gap-2"><Briefcase size={14} className="text-[#38BDF8]" />{item.item_type}</div></td>
-                      <td className="px-10 py-8 text-gray-400">{item.item_agreement}</td>
-                      <td className="px-10 py-8 text-right font-mono font-black text-2xl text-white">{Number(item.item_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <tr key={item.item_autoid.toString()} className="group hover:bg-[#0EA5E9]/5 transition-colors">
+                      <td className="px-10 py-8 font-bold text-white italic">
+                        <div className="flex items-center gap-2"><Briefcase size={14} className="text-[#38BDF8]" />{item.item_type}</div>
+                      </td>
+                      <td className="px-10 py-8 text-gray-400 group-hover:text-gray-300 transition-colors">{item.item_agreement}</td>
+                      <td className="px-10 py-8 text-right font-mono font-black text-2xl text-white tracking-tighter">
+                        {Number(item.item_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="flex justify-end p-4">
+               <p className="text-gray-700 text-[10px] uppercase font-bold tracking-widest">End of Contract Report • Secure Data Access</p>
             </div>
           </div>
 
