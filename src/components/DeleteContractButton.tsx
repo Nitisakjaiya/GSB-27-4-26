@@ -1,7 +1,7 @@
 'use client'; // 👈 บรรทัดนี้สำคัญที่สุด เพื่อให้ใช้ confirm() ได้
 
 import { Trash2 } from "lucide-react";
-import { deleteContract } from "../app/contracts/actions";
+import { deleteContract } from "../app/(protected)/contracts/actions";
 
 export default function DeleteContractButton({ id }: { id: string }) {
   return (
