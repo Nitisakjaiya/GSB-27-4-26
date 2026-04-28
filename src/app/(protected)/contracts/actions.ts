@@ -1,5 +1,6 @@
 'use server'
 
+import { Decimal } from "@prisma/client/runtime/library";
 import { minioClient, BUCKET_NAME } from "../../../lib/minio";
 import { prisma } from "../../../lib/prisma"
 import { auth } from "../../../auth"
@@ -224,4 +225,55 @@ export async function updateContract(formData: FormData) {
 
   // ✅ แก้จุดที่ 2: redirect ไปที่ URL จริง (ไม่มีวงเล็บ)
   redirect(`/contracts/${id}`); 
+}
+
+// --- สำหรับจัดการรายการงบประมาณย่อย (Contract Items) ---
+
+export async function addContractItem(formData: FormData) {
+  const contractId = formData.get("contractId") as string;
+  const item_type = formData.get("item_type") as string;
+  const item_agreement = formData.get("item_agreement") as string;
+  const item_cost = formData.get("item_cost") as string;
+
+  await prisma.tb_contract_items.create({
+    data: {
+      contract_id: BigInt(contractId),
+      item_type,
+      item_agreement,
+      item_cost: new Decimal(item_cost || 0),
+    },
+  });
+
+  revalidatePath(`/contracts/${contractId}/edit`);
+}
+
+export async function updateContractItem(formData: FormData) {
+  const item_autoid = formData.get("item_autoid") as string;
+  const contractId = formData.get("contractId") as string;
+  const item_type = formData.get("item_type") as string;
+  const item_agreement = formData.get("item_agreement") as string;
+  const item_cost = formData.get("item_cost") as string;
+
+  await prisma.tb_contract_items.update({
+    where: { item_autoid: BigInt(item_autoid) },
+    data: {
+      item_type,
+      item_agreement,
+      item_cost: new Decimal(item_cost || 0),
+    },
+  });
+
+  revalidatePath(`/contracts/${contractId}/edit`);
+}
+
+export async function deleteContractItem(formData: FormData) {
+  const item_autoid = formData.get("item_autoid") as string;
+  const contractId = formData.get("contractId") as string;
+
+  await prisma.tb_contract_items.update({
+    where: { item_autoid: BigInt(item_autoid) },
+    data: { is_deleted: 1 },
+  });
+
+  revalidatePath(`/contracts/${contractId}/edit`);
 }
