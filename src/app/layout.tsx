@@ -10,7 +10,8 @@ import {
   LogOut, 
   TrendingUp, // ไอคอนสำหรับรายงานงบประมาณ
   Bell,
-  UserCircle
+  UserCircle,
+  FileText // 🚀 เพิ่มไอคอน FileText สำหรับเมนูรายการสัญญา
 } from "lucide-react"; 
 
 import { auth } from "../auth"; // ตรวจสอบตำแหน่งไฟล์ auth.ts ของท่านประธานด้วยนะครับ
@@ -51,44 +52,51 @@ export default async function RootLayout({
             </div>
 
             {/* Navigation Links */}
-           {/* --- ภายในแท็ก <aside> ให้หา <nav> แล้ววางทับตรงนี้ครับ --- */}
-          <nav className="flex-1 px-4 py-8 space-y-1 overflow-y-auto custom-scrollbar">
-          {/* --- กลุ่มหน้าหลัก --- */}
-          <p className="px-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Overview</p>
-          <Link href="/dashboard" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#EB005D]/10 hover:text-[#EB005D] transition-all group">
-          <LayoutDashboard size={20} className="group-hover:scale-110 transition-transform" />
-          <span className="font-bold text-sm">Dashboard</span>
-          </Link>
+            <nav className="flex-1 px-4 py-8 space-y-1 overflow-y-auto custom-scrollbar">
+              {/* --- กลุ่มหน้าหลัก --- */}
+              <p className="px-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Overview</p>
+              <Link href="/dashboard" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#EB005D]/10 hover:text-[#EB005D] transition-all group">
+                <LayoutDashboard size={20} className="group-hover:scale-110 transition-transform" />
+                <span className="font-bold text-sm">Dashboard</span>
+              </Link>
 
-         {/* --- กลุ่มระบบสัญญา (Blue/Pink Tone) --- */}
-        <p className="px-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mt-8 mb-2">Contract Module</p>
-        <Link href="/contracts/new" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#EB005D]/10 hover:text-[#EB005D] transition-all group">
-        <FilePlus size={20} className="group-hover:scale-110 transition-transform" />
-        <span className="font-bold text-sm">เพิ่มสัญญาใหม่</span>
-        </Link>
-        <Link href="/committees" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#EB005D]/10 hover:text-[#EB005D] transition-all group">
-        <Users size={20} className="group-hover:scale-110 transition-transform" />
-        <span className="font-bold text-sm">จัดการกรรมการ</span>
-        </Link>
+              {/* --- กลุ่มระบบสัญญา (Blue/Pink Tone) --- */}
+              <p className="px-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mt-8 mb-2">Contract Module</p>
+              
+              {/* 🚀 ปุ่มรายการสัญญา (เพิ่มใหม่) */}
+              <Link href="/contracts" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#EB005D]/10 hover:text-[#EB005D] transition-all group">
+                <FileText size={20} className="group-hover:scale-110 transition-transform" />
+                <span className="font-bold text-sm">รายการสัญญา</span>
+              </Link>
 
-        {/* --- กลุ่มระบบแผนงาน (Green Tone) --- */}
-        <p className="px-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mt-8 mb-2">Planning Module</p>
-        <Link href="/planning" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#10b981]/10 hover:text-[#10b981] transition-all group border border-transparent hover:border-[#10b981]/20">
-        <div className="p-1 bg-[#10b981]/20 rounded-md">
-        <TrendingUp size={18} className="text-[#10b981]" />
-        </div>
-        <span className="font-bold text-sm">รายการแผนงาน</span>
-        </Link>
+              <Link href="/contracts/new" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#EB005D]/10 hover:text-[#EB005D] transition-all group">
+                <FilePlus size={20} className="group-hover:scale-110 transition-transform" />
+                <span className="font-bold text-sm">เพิ่มสัญญาใหม่</span>
+              </Link>
+              
+              <Link href="/committees" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#EB005D]/10 hover:text-[#EB005D] transition-all group">
+                <Users size={20} className="group-hover:scale-110 transition-transform" />
+                <span className="font-bold text-sm">จัดการกรรมการ</span>
+              </Link>
 
-        {/* --- กลุ่มรายงาน (Phase 4) --- */}
-        <p className="px-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mt-8 mb-2">Reports & Analysis</p>
-        <Link href="/reports/budget" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#EB005D]/10 hover:text-[#EB005D] transition-all group">
-        <div className="p-1 bg-[#EB005D]/20 rounded-md">
-        <TrendingUp size={18} className="text-[#EB005D]" />
-        </div>
-        <span className="font-bold text-sm text-[#EB005D]">รายงานงบประมาณ</span>
-        </Link>
-        </nav>
+              {/* --- กลุ่มระบบแผนงาน (Green Tone) --- */}
+              <p className="px-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mt-8 mb-2">Planning Module</p>
+              <Link href="/planning" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#10b981]/10 hover:text-[#10b981] transition-all group border border-transparent hover:border-[#10b981]/20">
+                <div className="p-1 bg-[#10b981]/20 rounded-md">
+                  <TrendingUp size={18} className="text-[#10b981]" />
+                </div>
+                <span className="font-bold text-sm">รายการแผนงาน</span>
+              </Link>
+
+              {/* --- กลุ่มรายงาน (Phase 4) --- */}
+              <p className="px-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mt-8 mb-2">Reports & Analysis</p>
+              <Link href="/reports/budget" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#EB005D]/10 hover:text-[#EB005D] transition-all group">
+                <div className="p-1 bg-[#EB005D]/20 rounded-md">
+                  <TrendingUp size={18} className="text-[#EB005D]" />
+                </div>
+                <span className="font-bold text-sm text-[#EB005D]">รายงานงบประมาณ</span>
+              </Link>
+            </nav>
 
             {/* Bottom Actions */}
             <div className="p-4 border-t border-gray-800 space-y-1">
