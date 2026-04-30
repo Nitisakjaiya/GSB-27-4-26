@@ -8,7 +8,6 @@ import {
   Text, 
   ProgressBar, 
   BadgeDelta,
-  Title as TremorTitle 
 } from "@tremor/react";
 import { 
   LayoutDashboard, 
@@ -18,7 +17,8 @@ import {
   Eye, 
   AlertCircle, 
   ArrowRight, 
-  TrendingUp 
+  TrendingUp,
+  Calendar
 } from "lucide-react";
 import Link from "next/link";
 import DeleteContractButton from "./DeleteContractButton";
@@ -31,6 +31,17 @@ interface DashboardProps {
 
 export default function DashboardClient({ totalContracts, recentContracts, expiringSoon }: DashboardProps) {
   const today = new Date();
+
+  // 🚀 ฟังก์ชันช่วยแปลงรูปแบบวันที่ให้เป็นภาษาไทย (เช่น 5 พ.ค. 2569)
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
+    const d = new Date(dateString);
+    return d.toLocaleDateString('th-TH', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
 
   return (
     <div className="p-8 space-y-8 animate-in fade-in duration-700 bg-[#0b1120] min-h-screen text-gray-100">
@@ -113,13 +124,15 @@ export default function DashboardClient({ totalContracts, recentContracts, expir
                     <th className="px-6 py-4">Actions</th> 
                     <th className="px-6 py-4">เลขที่สัญญา</th>
                     <th className="px-6 py-4">ชื่อโครงการ</th>
+                    {/* 🚀 จุดที่เพิ่มในตาราง: วันหมดอายุ */}
+                    <th className="px-6 py-4">วันหมดอายุ</th>
                     <th className="px-6 py-4">สถานะ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800/50">
                   {recentContracts.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-20 text-center text-gray-600 italic">
+                      <td colSpan={5} className="px-6 py-20 text-center text-gray-600 italic">
                         ไม่พบข้อมูลสัญญาในระบบ
                       </td>
                     </tr>
@@ -141,6 +154,13 @@ export default function DashboardClient({ totalContracts, recentContracts, expir
                         </td>
                         <td className="px-6 py-4 max-w-xs truncate text-gray-400 group-hover:text-gray-200 transition-colors">
                           {contract.ct_name}
+                        </td>
+                        {/* 🚀 จุดที่เพิ่มข้อมูลวันที่ในตาราง */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 text-gray-400 text-xs">
+                            {contract.end_date && <Calendar className="w-3 h-3 text-gray-500" />}
+                            {formatDate(contract.end_date)}
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <Badge color="slate" className="bg-gray-800 text-gray-300 border-none font-bold text-[10px] uppercase">
@@ -195,6 +215,10 @@ export default function DashboardClient({ totalContracts, recentContracts, expir
                             <Text className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">{contract.ct_number}</Text>
                             <Text className="text-sm font-bold text-gray-200 group-hover:text-white transition-colors truncate max-w-[150px]">
                               {contract.ct_name}
+                            </Text>
+                            {/* 🚀 จุดที่เพิ่มข้อมูลวันที่ใต้ชื่อโครงการในกรอบสีชมพู */}
+                            <Text className="text-[10px] text-gray-500 mt-1 flex items-center gap-1">
+                              <Calendar className="w-3 h-3" /> หมดอายุ: {formatDate(contract.end_date)}
                             </Text>
                           </div>
                           <BadgeDelta deltaType="moderateDecrease" className="text-[10px] font-black">
