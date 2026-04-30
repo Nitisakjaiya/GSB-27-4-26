@@ -14,7 +14,9 @@ import {
   Trash2, 
   Briefcase, 
   LayoutDashboard,
-  Info
+  Info,
+  Calendar,
+  Clock
 } from "lucide-react";
 
 export default async function EditContractPage({ 
@@ -36,6 +38,12 @@ export default async function EditContractPage({
   });
 
   if (!contract || contract.is_deleted === 1) notFound();
+
+  // 🚀 Helper: แปลง Date object เป็น String format "YYYY-MM-DD" เพื่อใช้เป็น defaultValue ใน input type="date"
+  const formatDateForInput = (date: Date | null) => {
+    if (!date) return "";
+    return date.toISOString().split('T')[0];
+  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 space-y-10">
@@ -88,13 +96,40 @@ export default async function EditContractPage({
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Project Name</label>
-                  <textarea name="ct_name" defaultValue={contract.ct_name ?? ""} rows={5} className="w-full bg-black/50 border border-gray-800 rounded-2xl px-5 py-3 text-white focus:border-amber-500 outline-none transition-all text-sm resize-none shadow-inner leading-relaxed" required />
+                  <textarea name="ct_name" defaultValue={contract.ct_name ?? ""} rows={4} className="w-full bg-black/50 border border-gray-800 rounded-2xl px-5 py-3 text-white focus:border-amber-500 outline-none transition-all text-sm resize-none shadow-inner leading-relaxed" required />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Lead Coordinator</label>
                   <input name="coordinator_name" defaultValue={contract.coordinator_name ?? ""} className="w-full bg-black/50 border border-gray-800 rounded-2xl px-5 py-3 text-white focus:border-amber-500 outline-none transition-all text-sm shadow-inner" required />
                 </div>
+
+                {/* 🚀 จุดที่เพิ่มใหม่: วันที่เริ่ม และ วันสิ้นสุดสัญญา */}
+                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-800/50">
+                   <div className="space-y-2">
+                     <label className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">
+                       <Calendar size={12} /> Start Date
+                     </label>
+                     <input 
+                       type="date"
+                       name="start_date" 
+                       defaultValue={formatDateForInput(contract.start_date)}
+                       className="w-full bg-black/50 border border-gray-800 rounded-xl px-4 py-2.5 text-white focus:border-emerald-500 outline-none transition-all text-xs shadow-inner color-scheme-dark" 
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <label className="flex items-center gap-1.5 text-[10px] font-black text-[#EB005D] uppercase tracking-widest ml-1">
+                       <Clock size={12} /> End Date
+                     </label>
+                     <input 
+                       type="date"
+                       name="end_date" 
+                       defaultValue={formatDateForInput(contract.end_date)}
+                       className="w-full bg-black/50 border border-gray-800 rounded-xl px-4 py-2.5 text-white focus:border-[#EB005D] outline-none transition-all text-xs shadow-inner color-scheme-dark" 
+                     />
+                   </div>
+                </div>
+
               </div>
 
               <button 
