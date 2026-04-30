@@ -5,7 +5,7 @@ import { minioClient, BUCKET_NAME } from "../../../lib/minio";
 import { prisma } from "../../../lib/prisma"
 import { auth } from "../../../auth"
 import { redirect } from "next/navigation"
-import { revalidatePath } from "next/cache" // 👈 1. เพิ่มบรรทัดนี้เข้ามา
+import { revalidatePath } from "next/cache" 
 
 export async function createContract(formData: FormData) {
   const session = await auth()
@@ -23,7 +23,12 @@ export async function createContract(formData: FormData) {
   const item_cost_raw = formData.get("item_cost") as string
   const item_cost = item_cost_raw ? parseFloat(item_cost_raw) : 0
 
-  // 👇 พิมพ์ Log เช็คว่าฟังก์ชันทำงานจริงไหม
+  // 🚀 💡 จุดที่เพิ่มใหม่: รับค่าและแปลงวันที่จากหน้า Form
+  const startDateRaw = formData.get("start_date") as string;
+  const endDateRaw = formData.get("end_date") as string;
+  const start_date = startDateRaw ? new Date(startDateRaw) : null;
+  const end_date = endDateRaw ? new Date(endDateRaw) : null;
+
   console.log(`👉 กำลังบันทึกข้อมูลสัญญา: ${ct_number}`); 
 
   try {
@@ -34,11 +39,17 @@ export async function createContract(formData: FormData) {
         ct_name: ct_name,
         coordinator_name: coordinator_name,
         created_by: userId,
+        // 🚀 💡 จุดที่เพิ่มใหม่: บันทึกวันที่ลง tb_contract
+        start_date: start_date,
+        end_date: end_date,
         items: {
           create: {
             item_type: item_type,
             item_agreement: item_agreement,
             item_cost: item_cost,
+            // 🚀 💡 จุดที่เพิ่มใหม่: บันทึกวันที่ลง tb_contract_items ด้วย (ถ้าระบบต้องการ)
+            start_date: start_date,
+            end_date: end_date,
           }
         }
       }
@@ -49,13 +60,12 @@ export async function createContract(formData: FormData) {
     throw new Error("ไม่สามารถบันทึกข้อมูลได้")
   }
 
-  // 👈 2. สั่งล้างแคชหน้า Dashboard ก่อนเด้งไป
   revalidatePath("/dashboard") 
   redirect("/dashboard")
 }
 
 // แก้ไขเฉพาะฟังก์ชัน deleteContract นะครับ ส่วนอื่นคงเดิมไว้
-export async function deleteContract(formData: FormData) { // 👈 เปลี่ยนจาก id: bigint เป็น formData: FormData
+export async function deleteContract(formData: FormData) { 
   // 1. ดึงค่า ID ที่ซ่อนอยู่ใน input name="id"
   const idStr = formData.get("id") as string;
 
@@ -98,7 +108,7 @@ export async function addCommittee(formData: FormData) {
   try {
     await prisma.tb_committees.create({
       data: {
-        base_type: 'CON', // 'CON' สำหรับสัญญาตาม Schema ที่วางไว้
+        base_type: 'CON', 
         base_id: BigInt(base_id),
         cmit_name: cmit_name,
         cmit_position: cmit_position,
@@ -119,7 +129,7 @@ export async function deleteCommittee(formData: FormData) {
   try {
     await prisma.tb_committees.update({
       where: { cmit_aid: BigInt(cmit_aid) },
-      data: { is_deleted: 1 } // ใช้ Soft Delete ตาม Pattern ของคุณนิติ
+      data: { is_deleted: 1 } 
     });
 
     revalidatePath(`/(protected)/contracts/${base_id}`);
