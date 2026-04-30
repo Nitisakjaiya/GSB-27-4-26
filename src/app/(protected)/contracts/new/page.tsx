@@ -1,11 +1,11 @@
 import { createContract } from '../actions'
-import { FileText, ArrowLeft, Save } from 'lucide-react'
+import { FileText, ArrowLeft, Save, Calendar } from 'lucide-react'
 
 export default function NewContractPage() {
   return (
     <div className="p-8 max-w-4xl mx-auto">
       {/* ปุ่มย้อนกลับ */}
-      <a href="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6 text-sm">
+      <a href="/dashboard" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6 text-sm">
         <ArrowLeft size={16} />
         กลับไปหน้าหลัก
       </a>
@@ -58,13 +58,41 @@ export default function NewContractPage() {
             required 
           />
         </div>
+
+        {/* 🚀 💡 ส่วนที่เพิ่มใหม่: วันที่เริ่มและสิ้นสุดสัญญา */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-black/50 rounded-xl border border-gray-800">
+           <div>
+             <label className="flex items-center gap-2 text-sm font-medium text-gray-400 mb-2">
+               <Calendar size={14} className="text-emerald-500" />
+               วันที่เริ่มสัญญา (Start Date)
+             </label>
+             <input 
+               type="date"
+               name="start_date" 
+               className="w-full bg-black border border-gray-700 rounded-xl p-3 text-white focus:border-blue-500 outline-none transition-all color-scheme-dark" 
+               required 
+             />
+           </div>
+           <div>
+             <label className="flex items-center gap-2 text-sm font-medium text-gray-400 mb-2">
+               <Calendar size={14} className="text-[#EB005D]" />
+               วันที่สิ้นสุดสัญญา (End Date)
+             </label>
+             <input 
+               type="date"
+               name="end_date" 
+               className="w-full bg-black border border-gray-700 rounded-xl p-3 text-white focus:border-blue-500 outline-none transition-all color-scheme-dark" 
+               required 
+             />
+           </div>
+        </div>
+        {/* ------------------------------------------- */}
         
         {/* ส่วนข้อมูลรายการย่อย (ปรับปรุงใหม่) */}
         <div className="mt-6 pt-6 border-t border-gray-800">
           <h3 className="text-sm font-semibold text-blue-400 mb-4 uppercase tracking-widest">ข้อมูลรายการย่อย (Contract Item)</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* จุดที่เพิ่ม: เลือกประเภทรายการ */}
             <div>
               <label className="block text-xs text-gray-500 mb-1">ประเภท</label>
               <select 
