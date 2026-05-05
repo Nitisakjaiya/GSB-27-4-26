@@ -40,15 +40,20 @@ export default function NewPlanningPage() {
               />
             </div>
             
+            {/* 💡 ใช้ Select Dropdown สำหรับเลือกปีงบประมาณ ป้องกันการพิมพ์ผิด */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Budget Year (ปีงบประมาณ)</label>
-              <input 
+              <select 
                 name="pl_year" 
-                type="number" 
-                defaultValue={currentYearTH} 
-                className="w-full bg-black/50 border border-gray-800 rounded-2xl px-5 py-4 text-white focus:border-emerald-500 outline-none transition-all text-sm font-mono shadow-inner" 
-                required 
-              />
+                defaultValue={currentYearTH}
+                className="w-full bg-black/50 border border-gray-800 rounded-2xl px-5 py-4 text-white focus:border-emerald-500 outline-none transition-all text-sm font-mono shadow-inner appearance-none cursor-pointer"
+              >
+                {/* วนลูปแสดงปีปัจจุบัน และล่วงหน้าอีก 4 ปี */}
+                {[...Array(5)].map((_, i) => {
+                  const year = currentYearTH + i;
+                  return <option key={year} value={year}>ปีงบประมาณ {year}</option>;
+                })}
+              </select>
             </div>
           </div>
 
