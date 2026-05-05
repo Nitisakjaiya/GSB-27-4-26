@@ -167,3 +167,22 @@ model tb_tracking {
 
   @@index([base_type, base_id])
 }
+
+// 9. ตารางการกระจายงบประมาณรายปี (Budget Allocation - Polymorphic)
+model tb_budget_allocation {
+  bg_aid           BigInt   @id @default(autoincrement())
+  base_type        String   @db.VarChar(10) // 'CON' สำหรับสัญญา หรือ 'PLA' สำหรับแผนงาน
+  base_id          BigInt
+  budget_year      Int      // ปีงบประมาณ เช่น 2569
+  allocated_amount Decimal  @db.Decimal(18, 2) // ยอดเงินที่จัดสรรในปีนั้น
+  bg_remark        String?  @db.NVarChar(500) // หมายเหตุ (ถ้ามี)
+
+  // Standard Columns
+  created_at       DateTime @default(now())
+  created_by       BigInt?
+  updated_at       DateTime @default(now()) @updatedAt
+  is_deleted       Int      @default(0) @db.TinyInt
+
+  @@index([base_type, base_id])
+  @@index([budget_year])
+}
