@@ -2,6 +2,7 @@ import { prisma } from "../../../../lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import TrackingForm from "../../../../components/forms/TrackingForm";
+import BudgetAllocationForm from "../../../../components/forms/BudgetAllocationForm";
 import { 
   ArrowLeft, 
   Calendar, 
@@ -14,7 +15,8 @@ import {
   HardDrive,
   File,
   Download,
-  Info
+  Info,
+  Wallet
 } from "lucide-react";
 
 // ดึงฟังก์ชันช่วยดาวน์โหลดจาก Contract Actions มาใช้ร่วมกัน
@@ -66,8 +68,8 @@ export default async function PlanningDetailPage({
     });
   }
 
-  // 3. ดึงข้อมูลประวัติการติดตามสถานะ (Tracking Records)
-  const trackingRecords = await prisma.tb_tracking.findMany({
+  // 3. ดึงข้อมูลประวัติการติดตามสถานะ (Tracking Records - Task 4.1)
+  const rawTrackingRecords = await prisma.tb_tracking.findMany({
     where: { 
       base_id: BigInt(id), 
       base_type: 'PLA', 
@@ -76,7 +78,28 @@ export default async function PlanningDetailPage({
     orderBy: { trk_date: 'desc' }
   });
 
-  // คำนวณยอดรวมงบประมาณ
+  // แปลง Decimal เป็น Number สำหรับ Client Component
+  const trackingRecords = rawTrackingRecords.map(record => ({
+    ...record,
+    disbursed_amount: record.disbursed_amount ? Number(record.disbursed_amount) : null,
+  }));
+
+  // 4. ดึงข้อมูลการจัดสรรงบประมาณรายปี (Budget Allocation - Task 4.3)
+  const rawBudgets = await prisma.tb_budget_allocation.findMany({
+    where: { 
+      base_id: BigInt(id), 
+      base_type: 'PLA', 
+      is_deleted: 0 
+    },
+    orderBy: { budget_year: 'asc' }
+  });
+
+  const budgetAllocations = rawBudgets.map(b => ({
+    ...b,
+    allocated_amount: Number(b.allocated_amount)
+  }));
+
+  // คำนวณยอดรวมงบประมาณจากรายการย่อย
   const totalBudget = plan.items.reduce((sum, item) => sum + Number(item.pli_budget || 0), 0);
 
   return (
@@ -187,7 +210,7 @@ export default async function PlanningDetailPage({
             </div>
           </div>
 
-          {/* --- Task 3.8: Reference Data Section (Only show if created from contract) --- */}
+          {/* --- Reference Data Section --- */}
           {sourceContract && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
               
@@ -244,14 +267,31 @@ export default async function PlanningDetailPage({
             </div>
           )}
 
-          {/* 💡 --- Section 3: Tracking & Progress (Phase 4) --- 💡 */}
+          {/* 💡 --- Section 4: Budget Allocation (Task 4.4) --- 💡 */}
+          <div className="pt-10 border-t border-gray-800">
+             <div className="mb-6 flex items-center gap-3">
+                <Wallet className="text-emerald-500" size={24} />
+                <div>
+                  <h3 className="text-2xl font-black text-white italic tracking-tight uppercase">Budget Allocation</h3>
+                  <p className="text-gray-500 text-xs font-mono mt-1">กำหนดสัดส่วนการเบิกจ่ายรายปีงบประมาณ</p>
+                </div>
+             </div>
+             
+             <BudgetAllocationForm 
+               baseId={id} 
+               baseType="PLA" 
+               allocations={budgetAllocations}
+               totalBudget={totalBudget}
+             />
+          </div>
+
+          {/* 💡 --- Section 5: Tracking & Progress (Phase 4) --- 💡 */}
           <div className="pt-10 border-t border-gray-800">
              <div className="mb-8">
                 <h3 className="text-2xl font-black text-[#0EA5E9] italic tracking-tight uppercase">Progress Tracking</h3>
                 <p className="text-gray-500 text-xs font-mono mt-1">อัปเดตและติดตามความคืบหน้าของการเบิกจ่ายและสถานะแผนงาน</p>
              </div>
              
-             {/* เรียกใช้งาน Polymorphic Component */}
              <TrackingForm 
                baseId={id} 
                baseType="PLA" 
