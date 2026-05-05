@@ -148,3 +148,22 @@ model tb_planning_items {
   updated_at       DateTime  @default(now()) @updatedAt // 🚀 แก้ไข: เพิ่ม default
   is_deleted       Int       @default(0) @db.TinyInt
 }
+
+// 8. ตารางติดตามความคืบหน้า (Tracking Module - Polymorphic)
+model tb_tracking {
+  trk_aid          BigInt   @id @default(autoincrement())
+  base_type        String   @db.VarChar(10) // 'CON' หรือ 'PLA'
+  base_id          BigInt
+  trk_status       String?  @db.VarChar(50)
+  trk_detail       String?  @db.NVarChar(500)
+  trk_date         DateTime @default(now())
+  disbursed_amount Decimal? @db.Decimal(18, 2)
+
+  // Standard Columns
+  created_at       DateTime @default(now())
+  created_by       BigInt?
+  updated_at       DateTime @default(now()) @updatedAt
+  is_deleted       Int      @default(0) @db.TinyInt
+
+  @@index([base_type, base_id])
+}
