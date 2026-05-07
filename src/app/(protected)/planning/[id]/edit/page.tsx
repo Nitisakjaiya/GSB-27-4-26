@@ -71,6 +71,8 @@ export default async function EditPlanningPage({ params }: { params: Promise<{ i
                       <option value="DRAFT">DRAFT (ร่าง)</option>
                       <option value="ACTIVE">ACTIVE (ใช้งาน)</option>
                       <option value="COMPLETED">COMPLETED (เสร็จสิ้น)</option>
+                      <option value="APPROVED" className="bg-emerald-100 font-bold">APPROVED (อนุมัติแล้ว)</option>
+                      <option value="CANCELLED">CANCELLED (ยกเลิก)</option>
                     </select>
                   </div>
                 </div>
