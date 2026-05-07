@@ -106,7 +106,22 @@ export default async function EditContractPage({
                 </div>
 
                 {/* วันที่เริ่ม และ วันสิ้นสุดสัญญา */}
-                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-800/50">
+                {/* 🌟 เพิ่มช่อง: สัญญาลงวันที่ (ct_date) */}
+                <div className="space-y-2 pt-4 border-t border-gray-800/50">
+                  <label className="flex items-center gap-1.5 text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">
+                    <Calendar size={12} /> สัญญาลงวันที่ (Contract Date)
+                  </label>
+                  <input 
+                    type="date"
+                    name="ct_date" 
+                    defaultValue={formatDateForInput(contract.ct_date)}
+                    className="w-full bg-black/50 border border-gray-800 rounded-xl px-4 py-2.5 text-white focus:border-blue-500 outline-none transition-all text-xs shadow-inner color-scheme-dark" 
+                    required
+                  />
+                </div>
+
+                {/* วันที่เริ่ม และ วันสิ้นสุดสัญญา */}
+                <div className="grid grid-cols-2 gap-4 pt-2">
                    <div className="space-y-2">
                      <label className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">
                        <Calendar size={12} /> Start Date
