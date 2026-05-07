@@ -206,6 +206,7 @@ export async function getDownloadUrl(filePath: string) {
 
 // เพิ่มต่อท้ายใน actions.ts
 
+// แทนที่ฟังก์ชันเดิมด้วยโค้ดนี้ครับ
 export async function updateContract(formData: FormData) {
   const id = formData.get("id") as string;
   const category_code = formData.get("category_code") as string;
@@ -213,18 +214,30 @@ export async function updateContract(formData: FormData) {
   const ct_name = formData.get("ct_name") as string;
   const coordinator_name = formData.get("coordinator_name") as string;
 
+  // 🌟 1. รับค่าวันที่ที่เป็น String จากฟอร์ม (เช็กชื่อ input ในฟอร์มด้วยนะครับว่าตรงกันไหม)
+  const ctDateRaw = formData.get("ct_date") as string;
+  const startDateRaw = formData.get("start_date") as string;
+  const endDateRaw = formData.get("end_date") as string;
+  const signDateRaw = formData.get("sign_date") as string;
+
   try {
     await prisma.tb_contract.update({
       where: { ct_aid: BigInt(id) },
       data: {
-        category_code: formData.get("category_code") as string,
-        ct_number: formData.get("ct_number") as string,
-        ct_name: formData.get("ct_name") as string,
-        coordinator_name: formData.get("coordinator_name") as string,
+        category_code: category_code,
+        ct_number: ct_number,
+        ct_name: ct_name,
+        coordinator_name: coordinator_name,
+        
+        // 🌟 2. แปลง String เป็น Date แล้วบันทึกลงฐานข้อมูล
+        ct_date: ctDateRaw ? new Date(ctDateRaw) : null,
+        start_date: startDateRaw ? new Date(startDateRaw) : null,
+        end_date: endDateRaw ? new Date(endDateRaw) : null,
+        sign_date: signDateRaw ? new Date(signDateRaw) : null,
       },
     });
 
-    // ✅ แก้จุดที่ 1: revalidatePath ไม่ต้องมี (protected)
+    // ✅ Revalidate เพื่อล้าง Cache ให้หน้าเว็บดึงข้อมูลใหม่ทันที
     revalidatePath(`/contracts/${id}`);
     revalidatePath("/dashboard");
 
@@ -233,7 +246,7 @@ export async function updateContract(formData: FormData) {
     throw new Error("Update failed");
   }
 
-  // ✅ แก้จุดที่ 2: redirect ไปที่ URL จริง (ไม่มีวงเล็บ)
+  // ✅ Redirect กลับไปหน้า Detail ของสัญญา
   redirect(`/contracts/${id}`); 
 }
 
@@ -286,4 +299,54 @@ export async function deleteContractItem(formData: FormData) {
   });
 
   revalidatePath(`/contracts/${contractId}/edit`);
+}
+
+/**
+ * Task 6.2: คัดลอกข้อมูลจาก Planning ไปสร้างเป็น Contract ใหม่
+ */
+export async function createContractFromPlanning(planningId: string) {
+  try {
+    // 1. ดึงข้อมูลแผนงานต้นทาง
+    const plan = await prisma.tb_planning.findUnique({
+      where: { pl_aid: BigInt(planningId) },
+      include: { items: { where: { is_deleted: 0 } } }
+    });
+
+    if (!plan) throw new Error("ไม่พบข้อมูลแผนงาน");
+
+    // 2. สร้างสัญญาใหม่ (Main Contract)
+    const newContract = await prisma.tb_contract.create({
+      data: {
+        ct_name: `[จากแผนงาน] ${plan.pl_name}`,
+        contract_status: "ACTIVE",
+        // เราสามารถใส่ข้อมูลเบื้องต้นรอไว้ได้เลย
+        created_at: new Date(),
+      }
+    });
+
+    // 3. วนลูปคัดลอกรายการงบประมาณไปเป็นรายการสัญญา
+    if (plan.items.length > 0) {
+      const contractItems = plan.items.map(item => ({
+        contract_id: newContract.ct_aid,
+        item_type: item.pli_type,
+        item_agreement: item.pli_description,
+        item_cost: item.pli_budget,
+      }));
+
+      await prisma.tb_contract_items.createMany({
+        data: contractItems
+      });
+    }
+
+    // 4. อัปเดตสถานะแผนงานว่า "ถูกนำไปทำสัญญาแล้ว"
+    await prisma.tb_planning.update({
+      where: { pl_aid: BigInt(planningId) },
+      data: { status: "CONTRACTED" } // ตั้งสถานะใหม่เพื่อให้รู้ว่าจบขั้นตอนแผนแล้ว
+    });
+
+    return { success: true, newId: newContract.ct_aid.toString() };
+  } catch (error) {
+    console.error("Convert Error:", error);
+    return { success: false };
+  }
 }
