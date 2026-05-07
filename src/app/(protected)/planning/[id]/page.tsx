@@ -1,5 +1,5 @@
 import { prisma } from "../../../../lib/prisma";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import TrackingForm from "../../../../components/forms/TrackingForm";
 import BudgetAllocationForm from "../../../../components/forms/BudgetAllocationForm";
@@ -16,11 +16,15 @@ import {
   File,
   Download,
   Info,
-  Wallet
+  Wallet,
+  FilePlus2 // เพิ่ม Icon สำหรับปุ่มทำสัญญา
 } from "lucide-react";
 
 // ดึงฟังก์ชันช่วยดาวน์โหลดจาก Contract Actions มาใช้ร่วมกัน
 import { getDownloadUrl } from "../../contracts/actions";
+
+// นำเข้าฟังก์ชันแปลงแผนเป็นสัญญา (ประธานต้องสร้างไฟล์ actions.ts ไว้ในโฟลเดอร์เดียวกันนี้)
+import { convertPlanToContract } from "./actions";
 
 export default async function PlanningDetailPage({ 
   params 
@@ -113,6 +117,26 @@ export default async function PlanningDetailPage({
         </Link>
 
         <div className="flex gap-3">
+          {/* 🌟 ปุ่มใหม่: โผล่มาเฉพาะเมื่อ status = APPROVED */}
+          {plan.status === "APPROVED" && (
+            <form action={async () => {
+              "use server";
+              const res = await convertPlanToContract(plan.pl_aid.toString());
+              if (res.success && res.newContractId) {
+                // ถ้าสำเร็จวาร์ปไปหน้า Edit ของสัญญาใหม่
+                redirect(`/contracts/${res.newContractId}/edit`);
+              }
+            }}>
+              <button 
+                type="submit"
+                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black px-5 py-2.5 rounded-xl transition-all text-sm font-black shadow-lg shadow-emerald-500/20 active:scale-95"
+              >
+                <FilePlus2 size={16} />
+                ทำสัญญาจากแผนงานนี้
+              </button>
+            </form>
+          )}
+
           <Link 
             href={`/planning/${id}/edit`}
             className="flex items-center gap-2 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black px-5 py-2.5 rounded-xl border border-amber-500/20 transition-all text-sm font-bold shadow-lg shadow-amber-500/5 active:scale-95"
@@ -150,13 +174,22 @@ export default async function PlanningDetailPage({
               )}
             </div>
 
-            <div className="bg-black/40 p-8 rounded-[2rem] border border-gray-800 min-w-[280px] backdrop-blur-md">
-               <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-4">Current Status</p>
-               <div className="flex items-center gap-4">
-                  <div className={`w-4 h-4 rounded-full ${plan.status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.6)]' : plan.status === 'COMPLETED' ? 'bg-blue-500' : 'bg-amber-500'}`}></div>
-                  <span className="text-2xl font-bold text-white tracking-tight uppercase italic">{plan.status}</span>
-               </div>
-            </div>
+           <div className="bg-black/40 p-8 rounded-[2rem] border border-gray-800 min-w-[280px] backdrop-blur-md">
+   <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-4">Current Status</p>
+   <div className="flex items-center gap-4">
+      {/* 🟢 ใช้ .toUpperCase() เพื่อให้เช็กเงื่อนไขได้เป๊ะๆ ไม่ว่า DB จะพิมพ์มาแบบไหน */}
+      <div className={`w-4 h-4 rounded-full ${
+        plan.status?.toUpperCase() === 'ACTIVE' ? 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.6)]' : 
+        plan.status?.toUpperCase() === 'COMPLETED' ? 'bg-blue-500' : 
+        plan.status?.toUpperCase() === 'APPROVED' ? 'bg-emerald-400' : 
+        plan.status?.toUpperCase() === 'CANCELLED' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)]' : 
+        'bg-amber-500'
+      }`}></div>
+      <span className={`text-2xl font-bold tracking-tight uppercase italic ${plan.status?.toUpperCase() === 'CANCELLED' ? 'text-red-500' : 'text-white'}`}>
+        {plan.status}
+      </span>
+   </div>
+</div>
           </div>
 
           {/* --- Section 2: Budget Items --- */}
