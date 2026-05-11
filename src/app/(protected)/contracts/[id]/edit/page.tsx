@@ -105,6 +105,23 @@ export default async function EditContractPage({
                   <input name="coordinator_name" defaultValue={contract.coordinator_name ?? ""} className="w-full bg-black/50 border border-gray-800 rounded-2xl px-5 py-3 text-white focus:border-[#EB005D] outline-none transition-all text-sm shadow-inner" required />
                 </div>
 
+                {/* 🚀 เพิ่มช่อง Dropdown เปลี่ยนสถานะสัญญา */}
+                <div className="space-y-2 pt-4 border-t border-gray-800/50">
+                  <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest ml-1">
+                    Contract Status (สถานะสัญญา)
+                  </label>
+                  <select 
+                    name="contract_status" 
+                    defaultValue={contract.contract_status || "ACTIVE"}
+                    className="w-full bg-black/50 border border-gray-800 rounded-xl px-4 py-3 text-white font-bold focus:border-amber-500 outline-none transition-all text-sm shadow-inner appearance-none cursor-pointer"
+                  >
+                    <option value="DRAFT">DRAFT (ร่างสัญญา)</option>
+                    <option value="ACTIVE">ACTIVE (กำลังดำเนินการ)</option>
+                    <option value="COMPLETED">COMPLETED (เสร็จสิ้นโครงการ)</option>
+                    <option value="CANCELLED">CANCELLED (ยกเลิกสัญญา)</option>
+                  </select>
+                </div>
+
                 {/* วันที่เริ่ม และ วันสิ้นสุดสัญญา */}
                 {/* 🌟 เพิ่มช่อง: สัญญาลงวันที่ (ct_date) */}
                 <div className="space-y-2 pt-4 border-t border-gray-800/50">
