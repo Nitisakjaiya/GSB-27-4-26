@@ -213,6 +213,7 @@ export async function updateContract(formData: FormData) {
   const ct_number = formData.get("ct_number") as string;
   const ct_name = formData.get("ct_name") as string;
   const coordinator_name = formData.get("coordinator_name") as string;
+  const contract_status = formData.get("contract_status") as string;
 
   // 🌟 1. รับค่าวันที่ที่เป็น String จากฟอร์ม (เช็กชื่อ input ในฟอร์มด้วยนะครับว่าตรงกันไหม)
   const ctDateRaw = formData.get("ct_date") as string;
@@ -228,6 +229,7 @@ export async function updateContract(formData: FormData) {
         ct_number: ct_number,
         ct_name: ct_name,
         coordinator_name: coordinator_name,
+        contract_status: contract_status,
         
         // 🌟 2. แปลง String เป็น Date แล้วบันทึกลงฐานข้อมูล
         ct_date: ctDateRaw ? new Date(ctDateRaw) : null,
