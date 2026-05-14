@@ -238,6 +238,7 @@ export async function getDownloadUrl(filePath: string) {
 // เพิ่มต่อท้ายใน actions.ts
 
 // แทนที่ฟังก์ชันเดิมด้วยโค้ดนี้ครับ
+// แทนที่ฟังก์ชันเดิมด้วยโค้ดนี้ครับ
 export async function updateContract(formData: FormData) {
   const id = formData.get("id") as string;
   const category_code = formData.get("category_code") as string;
@@ -246,13 +247,20 @@ export async function updateContract(formData: FormData) {
   const coordinator_name = formData.get("coordinator_name") as string;
   const contract_status = formData.get("contract_status") as string;
 
-  // 🌟 1. รับค่าวันที่ที่เป็น String จากฟอร์ม (เช็กชื่อ input ในฟอร์มด้วยนะครับว่าตรงกันไหม)
+  // รับค่าวันที่ที่เป็น String จากฟอร์ม
   const ctDateRaw = formData.get("ct_date") as string;
   const startDateRaw = formData.get("start_date") as string;
   const endDateRaw = formData.get("end_date") as string;
   const signDateRaw = formData.get("sign_date") as string;
 
   try {
+    // 🚀 1. แอบดูข้อมูลเดิมก่อนว่า "สถานะ" เปลี่ยนไปจากเดิมไหม?
+    const oldContract = await prisma.tb_contract.findUnique({
+      where: { ct_aid: BigInt(id) },
+      select: { contract_status: true } // ดึงมาแค่สถานะก็พอ
+    });
+
+    // 2. อัปเดตข้อมูลสัญญาตามปกติ
     await prisma.tb_contract.update({
       where: { ct_aid: BigInt(id) },
       data: {
@@ -261,8 +269,6 @@ export async function updateContract(formData: FormData) {
         ct_name: ct_name,
         coordinator_name: coordinator_name,
         contract_status: contract_status,
-        
-        // 🌟 2. แปลง String เป็น Date แล้วบันทึกลงฐานข้อมูล
         ct_date: ctDateRaw ? new Date(ctDateRaw) : null,
         start_date: startDateRaw ? new Date(startDateRaw) : null,
         end_date: endDateRaw ? new Date(endDateRaw) : null,
@@ -270,7 +276,19 @@ export async function updateContract(formData: FormData) {
       },
     });
 
-    // ✅ Revalidate เพื่อล้าง Cache ให้หน้าเว็บดึงข้อมูลใหม่ทันที
+    // 🚀 3. ถ้าสถานะเปลี่ยน ให้บันทึกประวัติ (Audit Log) ลงตาราง tb_tracking ทันที!
+    if (oldContract && oldContract.contract_status !== contract_status) {
+      await prisma.tb_tracking.create({
+        data: {
+          base_type: "CON", // หมวดหมู่สัญญา
+          base_id: BigInt(id),
+          trk_status: contract_status,
+          trk_detail: `เปลี่ยนสถานะสัญญาจาก [${oldContract.contract_status || 'ไม่ระบุ'}] เป็น [${contract_status}]`,
+        }
+      });
+      console.log(`✅ บันทึกประวัติสำเร็จ: สัญญา ${id} เปลี่ยนเป็น ${contract_status}`);
+    }
+
     revalidatePath(`/contracts/${id}`);
     revalidatePath("/dashboard");
 
@@ -279,7 +297,6 @@ export async function updateContract(formData: FormData) {
     throw new Error("Update failed");
   }
 
-  // ✅ Redirect กลับไปหน้า Detail ของสัญญา
   redirect(`/contracts/${id}`); 
 }
 
