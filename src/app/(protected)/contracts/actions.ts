@@ -23,23 +23,25 @@ export async function createContract(formData: FormData) {
   const item_cost_raw = formData.get("item_cost") as string
   const item_cost = item_cost_raw ? parseFloat(item_cost_raw) : 0
 
-  // 🚀 💡 จุดที่เพิ่มใหม่: รับค่าและแปลงวันที่จากหน้า Form
   const startDateRaw = formData.get("start_date") as string;
   const endDateRaw = formData.get("end_date") as string;
   const start_date = startDateRaw ? new Date(startDateRaw) : null;
   const end_date = endDateRaw ? new Date(endDateRaw) : null;
 
+  // 🚀 💡 รับไฟล์ที่อัปโหลดมาจากฟอร์มหน้าบ้าน
+  const contract_file = formData.get("contract_file") as File | null;
+
   console.log(`👉 กำลังบันทึกข้อมูลสัญญา: ${ct_number}`); 
 
   try {
-    await prisma.tb_contract.create({
+    // 1. สร้างสัญญาหลักก่อน เพื่อให้ได้ ID (ct_aid) มาใช้งาน
+    const newContract = await prisma.tb_contract.create({
       data: {
         category_code: category_code,
         ct_number: ct_number,
         ct_name: ct_name,
         coordinator_name: coordinator_name,
         created_by: userId,
-        // 🚀 💡 จุดที่เพิ่มใหม่: บันทึกวันที่ลง tb_contract
         start_date: start_date,
         end_date: end_date,
         items: {
@@ -47,16 +49,45 @@ export async function createContract(formData: FormData) {
             item_type: item_type,
             item_agreement: item_agreement,
             item_cost: item_cost,
-            // 🚀 💡 จุดที่เพิ่มใหม่: บันทึกวันที่ลง tb_contract_items ด้วย (ถ้าระบบต้องการ)
             start_date: start_date,
             end_date: end_date,
           }
         }
       }
-    })
-    console.log(`✅ บันทึกลงฐานข้อมูลสำเร็จ!`);
+    });
+
+    console.log(`✅ บันทึกลงฐานข้อมูลสำเร็จ! ID: ${newContract.ct_aid}`);
+
+    // 🚀 💡 2. ระบบอัปโหลดไฟล์ (ทำงานต่อเมื่อมีการแนบไฟล์มาด้วยเท่านั้น)
+    if (contract_file && contract_file.size > 0) {
+      console.log(`👉 กำลังอัปโหลดไฟล์: ${contract_file.name}`);
+      
+      const base_id = newContract.ct_aid.toString();
+      const buffer = Buffer.from(await contract_file.arrayBuffer());
+      const fileName = `${Date.now()}-${contract_file.name}`;
+      const filePath = `CON/${base_id}/${fileName}`; // จัดเก็บเป็นหมวดหมู่ CON/ID_สัญญา/ชื่อไฟล์
+
+      // ส่งไฟล์ขึ้น MinIO Server
+      await minioClient.putObject(BUCKET_NAME, filePath, buffer, contract_file.size, {
+          'Content-Type': contract_file.type,
+      });
+
+      // บันทึกประวัติไฟล์ลง Database (tb_files)
+      await prisma.tb_files.create({
+        data: {
+          base_type: "CON",
+          base_id: newContract.ct_aid,
+          file_name: contract_file.name,
+          file_path: filePath,
+          file_size: contract_file.size,
+          mime_type: contract_file.type,
+        },
+      });
+      console.log(`✅ อัปโหลดไฟล์สำเร็จ!`);
+    }
+
   } catch (error) {
-    console.error("🔥 Database Error:", error)
+    console.error("🔥 Database/Upload Error:", error)
     throw new Error("ไม่สามารถบันทึกข้อมูลได้")
   }
 
