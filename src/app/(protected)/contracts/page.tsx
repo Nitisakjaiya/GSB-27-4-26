@@ -6,22 +6,22 @@ import {
   Plus, 
   Eye, 
   Edit3, 
-  Trash2,
   Calendar,
   Filter
 } from "lucide-react";
-import DeleteContractButton from "../../../components/DeleteContractButton"; // ดึงปุ่มลบจากคอมโพเนนต์ที่เรามีอยู่
+import DeleteContractButton from "../../../components/DeleteContractButton";
 
 export default async function ContractsListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; status?: string }>;
 }) {
-  // รองรับการค้นหาจาก URL (เช่น /contracts?q=GSB)
-  const { q } = await searchParams;
+  // 1. ดึงค่าคำค้นหา (q) และ ตัวกรองสถานะ (status) จาก URL
+  const { q, status } = await searchParams;
   const searchQuery = q || "";
+  const statusFilter = status || "";
 
-  // ดึงข้อมูลสัญญาจาก Database โดยมีเงื่อนไขการค้นหา
+  // 2. ดึงข้อมูลสัญญาจาก Database พร้อมเงื่อนไข Search & Filter
   const contracts = await prisma.tb_contract.findMany({
     where: {
       is_deleted: 0,
@@ -31,6 +31,8 @@ export default async function ContractsListPage({
           { ct_name: { contains: searchQuery } },
         ],
       }),
+      // ถ้ามีการเลือกสถานะ ให้กรองตามสถานะนั้นด้วย
+      ...(statusFilter && { contract_status: statusFilter }),
     },
     orderBy: { created_at: "desc" },
   });
@@ -48,7 +50,7 @@ export default async function ContractsListPage({
   return (
     <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-700 text-gray-100 space-y-8">
       
-      {/* --- Header & Search Bar --- */}
+      {/* --- Header & Add Button --- */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-3xl font-black text-white flex items-center gap-3 italic tracking-tight uppercase">
@@ -68,23 +70,58 @@ export default async function ContractsListPage({
         </Link>
       </div>
 
-      {/* --- Search & Filter Section --- */}
-      <div className="bg-gray-900/50 p-4 rounded-2xl border border-gray-800 flex flex-col md:flex-row gap-4 shadow-inner">
-        {/* ฟอร์มค้นหาแบบ Server-side */}
-        <form className="flex-1 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-          <input 
-            type="text" 
-            name="q" 
-            defaultValue={searchQuery}
-            placeholder="ค้นหาจากเลขที่สัญญา หรือ ชื่อโครงการ..." 
-            className="w-full bg-black/50 border border-gray-800 rounded-xl pl-12 pr-4 py-3 text-white focus:border-[#EB005D] outline-none transition-all text-sm"
-          />
-          <button type="submit" className="hidden">Search</button>
+      {/* --- 🚀 Search & Filter Section --- */}
+      <div className="bg-gray-900/50 p-4 rounded-2xl border border-gray-800 shadow-inner">
+        <form className="flex flex-col md:flex-row gap-4">
+          
+          {/* กล่องพิมพ์ค้นหา */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+            <input 
+              type="text" 
+              name="q" 
+              defaultValue={searchQuery}
+              placeholder="ค้นหาจากเลขที่สัญญา หรือ ชื่อโครงการ..." 
+              className="w-full bg-black/50 border border-gray-800 rounded-xl pl-12 pr-4 py-3 text-white focus:border-[#EB005D] outline-none transition-all text-sm"
+            />
+          </div>
+
+          {/* Dropdown กรองสถานะ */}
+          <div className="relative">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+              <Filter size={16} />
+            </div>
+            <select 
+              name="status"
+              defaultValue={statusFilter}
+              className="w-full md:w-48 bg-black/50 border border-gray-800 rounded-xl pl-10 pr-10 py-3 text-white focus:border-[#EB005D] outline-none transition-all text-sm appearance-none cursor-pointer"
+            >
+              <option value="">ทุกสถานะ (All)</option>
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="COMPLETED">COMPLETED</option>
+              <option value="CANCELLED">CANCELLED</option>
+            </select>
+          </div>
+
+          {/* ปุ่มกดค้นหา */}
+          <button 
+            type="submit" 
+            className="bg-gray-800 hover:bg-[#EB005D] text-white px-8 py-3 rounded-xl transition-all font-bold text-xs uppercase tracking-widest border border-gray-700 hover:border-[#EB005D]"
+          >
+            ค้นหา
+          </button>
+          
+          {/* ปุ่มล้างค่าการค้นหา (แสดงเมื่อมีการค้นหาเท่านั้น) */}
+          {(searchQuery || statusFilter) && (
+            <Link 
+              href="/contracts"
+              className="flex items-center justify-center bg-transparent hover:bg-gray-800 text-gray-500 hover:text-white px-6 py-3 rounded-xl transition-all font-bold text-xs uppercase tracking-widest border border-gray-800"
+            >
+              ล้างค่า
+            </Link>
+          )}
+
         </form>
-        <button className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 px-6 py-3 rounded-xl transition-all font-bold text-xs uppercase tracking-widest border border-gray-700">
-          <Filter size={16} /> Filters
-        </button>
       </div>
 
       {/* --- Main Table Card --- */}
@@ -109,7 +146,7 @@ export default async function ContractsListPage({
                     <div className="inline-flex flex-col items-center justify-center opacity-50">
                       <FileText size={48} className="text-gray-600 mb-4" />
                       <p className="text-gray-400 font-bold uppercase tracking-widest text-sm">No Contracts Found</p>
-                      <p className="text-gray-600 text-[10px] mt-1">ไม่พบข้อมูลสัญญาที่ตรงกับคำค้นหา "{searchQuery}"</p>
+                      <p className="text-gray-600 text-[10px] mt-1">ไม่พบข้อมูลสัญญาที่ตรงกับเงื่อนไข</p>
                     </div>
                   </td>
                 </tr>
@@ -141,6 +178,8 @@ export default async function ContractsListPage({
                       <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                         contract.contract_status === 'ACTIVE' 
                           ? 'bg-green-500/10 text-green-500 border border-green-500/20' 
+                          : contract.contract_status === 'COMPLETED'
+                          ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
                           : 'bg-orange-500/10 text-orange-500 border border-orange-500/20'
                       }`}>
                         {contract.contract_status || 'ACTIVE'}
@@ -162,7 +201,6 @@ export default async function ContractsListPage({
                         >
                           <Edit3 size={16} />
                         </Link>
-                        {/* ใช้ Component ปุ่มลบที่มีอยู่แล้ว */}
                         <DeleteContractButton id={contract.ct_aid.toString()} />
                       </div>
                     </td>
@@ -175,7 +213,6 @@ export default async function ContractsListPage({
         
         <div className="bg-gray-900/80 p-5 border-t border-gray-800 flex justify-between items-center">
           <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">CTMNG System • Datagrid View</p>
-          {/* อนาคตสามารถเพิ่ม Pagination ตรงนี้ได้ */}
         </div>
       </div>
 
