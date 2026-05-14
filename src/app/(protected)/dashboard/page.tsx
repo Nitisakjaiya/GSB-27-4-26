@@ -1,6 +1,7 @@
 import { prisma } from "../../../lib/prisma";
 import DashboardClient from "../../../components/DashboardClient";
 import DashboardCharts from "../../../components/DashboardCharts";
+import ExportExcelButton from "../../../components/ExportExcelButton";
 import Link from "next/link";
 import { 
   FileText, 
@@ -62,6 +63,24 @@ export default async function DashboardPage() {
   const budgetChartData = budgetGroups.map(g => ({
     name: g.item_type || 'ไม่ระบุ',
     Total: Number(g._sum.item_cost || 0)
+  }));
+
+  // ==========================================
+  // 1.6 ดึงข้อมูลสำหรับ Export Excel (จัดรูปแบบให้สวยงาม)
+  // ==========================================
+  const rawExportData = await prisma.tb_contract.findMany({
+    where: { is_deleted: 0 },
+    orderBy: { created_at: 'desc' }
+  });
+
+  const exportExcelData = rawExportData.map(ct => ({
+    "เลขที่สัญญา": ct.ct_number || "-",
+    "หมวดหมู่": ct.category_code || "-",
+    "ชื่อโครงการ": ct.ct_name || "-",
+    "ผู้ประสานงาน": ct.coordinator_name || "-",
+    "สถานะสัญญา": ct.contract_status || "ACTIVE",
+    "วันที่เริ่ม": ct.start_date ? ct.start_date.toISOString().split('T')[0] : "-",
+    "วันหมดอายุ": ct.end_date ? ct.end_date.toISOString().split('T')[0] : "-"
   }));
 
   // ==========================================
@@ -193,19 +212,23 @@ export default async function DashboardPage() {
       <div className="pt-4">
         <DashboardCharts statusData={statusChartData} budgetData={budgetChartData} />
       </div>
+      {/* --- ส่วนเนื้อหาตาราง --- */}
       <div className="pt-6">
-        <h3 className="text-xl font-black text-white italic tracking-tighter mb-6 flex items-center gap-3">
-          <span className="w-1.5 h-6 bg-[#EB005D] rounded-full"></span>
-          Data Analytics & Recent Activities
-        </h3>
-        <div className="bg-black/20 p-2 md:p-8 rounded-[2.5rem] border border-gray-800/50">
-          {/* ส่ง Props กลับไปให้ DashboardClient ตามเดิมเป๊ะๆ */}
-          <DashboardClient 
-            totalContracts={totalContracts} 
-            recentContracts={serializedRecent} 
-            expiringSoon={serializedExpiring} 
-          />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+          <h3 className="text-xl font-black text-white italic tracking-tighter flex items-center gap-3">
+            <span className="w-1.5 h-6 bg-[#EB005D] rounded-full"></span>
+            Data Analytics & Recent Activities
+          </h3>
+          
+          {/* 🚀 วางปุ่ม Export Excel ตรงนี้! */}
+          <ExportExcelButton data={exportExcelData} />
         </div>
+        
+        <DashboardClient 
+          totalContracts={totalContracts} 
+          recentContracts={recentContracts} 
+          expiringSoon={expiringSoon} 
+        />
       </div>
 
     </div>
