@@ -8,7 +8,8 @@ import {
   Briefcase, 
   Clock, 
   Wallet,
-  ArrowRight
+  ArrowRight,
+  Activity // 🚀 เพิ่มไอคอน Activity สำหรับ Feed
 } from "lucide-react";
 
 export const dynamic = 'force-dynamic'; 
@@ -29,7 +30,7 @@ export default async function DashboardPage() {
   const pendingPlans = await prisma.tb_planning.count({
     where: { 
       is_deleted: 0,
-      status: 'DRAFT' // หรือสถานะที่ตั้งไว้สำหรับรออนุมัติ
+      status: 'WAITING' // 🚀 แก้ไข: เปลี่ยนจาก DRAFT เป็น WAITING ตาม Workflow ที่เราวางไว้
     }
   });
 
@@ -39,7 +40,7 @@ export default async function DashboardPage() {
   });
   const totalBudget = Number(budgetResult._sum.item_cost || 0);
 
-// ==========================================
+  // ==========================================
   // 1.5 ดึงข้อมูลจัดกลุ่มสถานะสัญญา (สำหรับกราฟ)
   // ==========================================
   const statusGroups = await prisma.tb_contract.groupBy({
@@ -53,7 +54,7 @@ export default async function DashboardPage() {
     value: g._count.ct_aid
   }));
 
-// 🚀 เพิ่มโค้ดส่วนนี้: ดึงข้อมูลจัดกลุ่มงบประมาณตามประเภท (Item Type)
+  // ดึงข้อมูลจัดกลุ่มงบประมาณตามประเภท (Item Type)
   const budgetGroups = await prisma.tb_contract_items.groupBy({
     by: ['item_type'],
     _sum: { item_cost: true },
@@ -66,7 +67,7 @@ export default async function DashboardPage() {
   }));
 
   // ==========================================
-  // 1.6 ดึงข้อมูลสำหรับ Export Excel (จัดรูปแบบให้สวยงาม)
+  // 1.6 ดึงข้อมูลสำหรับ Export Excel
   // ==========================================
   const rawExportData = await prisma.tb_contract.findMany({
     where: { is_deleted: 0 },
@@ -84,9 +85,8 @@ export default async function DashboardPage() {
   }));
 
   // ==========================================
-  // 2. ดึงข้อมูลเดิมสำหรับตารางด้านล่าง (DashboardClient)
+  // 2. ดึงข้อมูลตาราง และ 🚀 ดึง Live Audit Trail
   // ==========================================
-  
   const recentContracts = await prisma.tb_contract.findMany({
     where: { is_deleted: 0 },
     orderBy: { created_at: 'desc' },
@@ -100,13 +100,17 @@ export default async function DashboardPage() {
     where: {
       is_deleted: 0,
       contract_status: "ACTIVE",
-      end_date: {
-        lte: next30Days,
-        gte: today 
-      }
+      end_date: { lte: next30Days, gte: today }
     },
     orderBy: { end_date: 'asc' },
     take: 5 
+  });
+
+  // 🚀 ดึงข้อมูลความเคลื่อนไหวล่าสุด (ดึงจากตาราง tb_tracking ที่เราเพิ่งทำระบบบันทึกไป)
+  const systemLogs = await prisma.tb_tracking.findMany({
+    where: { is_deleted: 0 },
+    orderBy: { trk_date: 'desc' },
+    take: 4 // โชว์แค่ 4 รายการล่าสุดพอให้หน้าเว็บดูเท่ๆ
   });
 
   // ==========================================
@@ -184,7 +188,7 @@ export default async function DashboardPage() {
             <p className="text-[10px] text-amber-400 font-black uppercase tracking-[0.2em] mb-2">Pending Approvals</p>
             <h2 className="text-5xl font-black text-white tracking-tighter mb-4">{pendingPlans}</h2>
             <Link href="/planning" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-amber-400 font-bold transition-colors">
-              ตรวจสอบแผนงาน <ArrowRight size={14} />
+              รอการอนุมัติ (WAITING) <ArrowRight size={14} />
             </Link>
           </div>
         </div>
@@ -207,11 +211,45 @@ export default async function DashboardPage() {
 
       </div>
 
-      {/* --- ส่วนเนื้อหาตาราง/กราฟ (คอมโพเนนต์เดิมของประธาน) --- */}
-      {/* 🚀 เพิ่มส่วนแสดงกราฟตรงนี้ครับ */}
-      <div className="pt-4">
-        <DashboardCharts statusData={statusChartData} budgetData={budgetChartData} />
+      {/* --- ส่วนเนื้อหากราฟ และ Live Feed --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
+        {/* กราฟ (กินพื้นที่ 2 ส่วน) */}
+        <div className="lg:col-span-2">
+          <DashboardCharts statusData={statusChartData} budgetData={budgetChartData} />
+        </div>
+
+        {/* 🚀 System Activity Feed (กินพื้นที่ 1 ส่วน) */}
+        <div className="bg-gray-900/50 rounded-[2.5rem] border border-gray-800 p-8 shadow-xl flex flex-col">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-purple-500/10 rounded-xl"><Activity className="text-purple-500" size={24} /></div>
+            <h3 className="text-xl font-black text-white italic tracking-tighter">Live Audit Trail</h3>
+          </div>
+          
+          <div className="flex-1 space-y-6">
+            {systemLogs.length > 0 ? systemLogs.map((log) => (
+              <div key={log.trk_aid.toString()} className="relative pl-6 border-l-2 border-gray-800">
+                <div className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-purple-500"></div>
+                <p className="text-xs text-gray-300 font-medium mb-1">{log.trk_detail}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-gray-500 font-mono">{log.trk_date.toLocaleString('th-TH')}</span>
+                  <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-gray-800 text-gray-400 border border-gray-700">
+                    ID: {log.base_id.toString()}
+                  </span>
+                </div>
+              </div>
+            )) : (
+              <div className="h-full flex flex-col items-center justify-center text-gray-600 opacity-50">
+                <Activity size={48} className="mb-2" />
+                <p className="text-xs font-bold uppercase tracking-widest">No Recent Activity</p>
+              </div>
+            )}
+          </div>
+          <Link href="/contracts" className="mt-6 w-full py-3 bg-gray-800 hover:bg-gray-700 text-white text-xs font-black uppercase tracking-widest rounded-xl text-center transition-colors">
+            View All Records
+          </Link>
+        </div>
       </div>
+
       {/* --- ส่วนเนื้อหาตาราง --- */}
       <div className="pt-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
@@ -219,15 +257,13 @@ export default async function DashboardPage() {
             <span className="w-1.5 h-6 bg-[#EB005D] rounded-full"></span>
             Data Analytics & Recent Activities
           </h3>
-          
-          {/* 🚀 วางปุ่ม Export Excel ตรงนี้! */}
           <ExportExcelButton data={exportExcelData} />
         </div>
         
         <DashboardClient 
           totalContracts={totalContracts} 
-          recentContracts={recentContracts} 
-          expiringSoon={expiringSoon} 
+          recentContracts={serializedRecent} 
+          expiringSoon={serializedExpiring} 
         />
       </div>
 
