@@ -41,7 +41,7 @@ export default function ContractForm({ plans, action }: { plans: any[], action: 
 
   return (
     // 🚀 เพิ่ม encType="multipart/form-data" เพื่อให้ฟอร์มนี้ส่งไฟล์ได้
-    <form action={action} encType="multipart/form-data" className="grid gap-6 bg-gray-900 p-8 rounded-2xl border border-gray-800 shadow-2xl">
+    <form action={action} className="grid gap-6 bg-gray-900 p-8 rounded-2xl border border-gray-800 shadow-2xl">
       
       {/* 🚀 💡 กล่อง Magic Bridge เลือกแผนงาน */}
       <div className="mb-2 p-6 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl shadow-inner">
