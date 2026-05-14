@@ -1,7 +1,7 @@
 "use client"; // 🚀 สำคัญมาก: ประกาศให้ไฟล์นี้ทำงานฝั่ง Client เพื่อให้ใช้ Auto-fill ได้
 
 import { useState } from "react";
-import { Save, Calendar, Link as LinkIcon } from "lucide-react";
+import { Save, Calendar, Link as LinkIcon, UploadCloud } from "lucide-react";
 
 // รับ Props ข้อมูล plans และฟังก์ชัน action มาจากหน้าหลัก
 export default function ContractForm({ plans, action }: { plans: any[], action: any }) {
@@ -40,7 +40,8 @@ export default function ContractForm({ plans, action }: { plans: any[], action: 
   };
 
   return (
-    <form action={action} className="grid gap-6 bg-gray-900 p-8 rounded-2xl border border-gray-800 shadow-2xl">
+    // 🚀 เพิ่ม encType="multipart/form-data" เพื่อให้ฟอร์มนี้ส่งไฟล์ได้
+    <form action={action} encType="multipart/form-data" className="grid gap-6 bg-gray-900 p-8 rounded-2xl border border-gray-800 shadow-2xl">
       
       {/* 🚀 💡 กล่อง Magic Bridge เลือกแผนงาน */}
       <div className="mb-2 p-6 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl shadow-inner">
@@ -133,6 +134,25 @@ export default function ContractForm({ plans, action }: { plans: any[], action: 
               className="w-full bg-black border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-emerald-500 font-bold text-right font-mono" 
             />
           </div>
+        </div>
+      </div>
+
+      {/* 🚀 💡 ส่วนที่เพิ่มใหม่: กล่องอัปโหลดไฟล์สัญญา (PDF) */}
+      <div className="mt-6 pt-6 border-t border-gray-800">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-blue-400 mb-4 uppercase tracking-widest">
+          <UploadCloud size={18} />
+          หลักฐานสัญญา (Document Archive)
+        </h3>
+        <div className="bg-black/40 border-2 border-dashed border-gray-700 rounded-2xl p-6 hover:border-blue-500 transition-all flex flex-col items-center justify-center gap-3">
+          <input 
+            type="file" 
+            name="contract_file" 
+            accept=".pdf, image/jpeg, image/png" // บังคับรับเฉพาะ PDF หรือรูปภาพ
+            className="w-full max-w-md text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-blue-600/20 file:text-blue-500 hover:file:bg-blue-600/30 cursor-pointer"
+          />
+          <p className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">
+            * รองรับไฟล์ PDF, JPG, PNG ขนาดไม่เกิน 5MB
+          </p>
         </div>
       </div>
 
