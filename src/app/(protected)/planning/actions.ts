@@ -158,3 +158,56 @@ export async function deletePlanning(id: string) {
     throw new Error("ไม่สามารถลบแผนงานได้");
   }
 }
+
+// ==========================================
+// ฟังก์ชันสำหรับส่งแผนงานไปขออนุมัติ
+// ==========================================
+export async function sendPlanForApproval(formData: FormData) {
+  const id = formData.get("id") as string;
+  
+  if (!id) return;
+
+  // เปลี่ยนสถานะในฐานข้อมูลเป็น "WAITING"
+  await prisma.tb_planning.update({
+    where: { pl_aid: BigInt(id) },
+    data: { 
+      status: "WAITING", 
+    }
+  });
+
+  // รีเฟรชหน้าเว็บเพื่อให้ข้อมูลอัปเดตทันที
+  revalidatePath('/planning');
+  revalidatePath(`/planning/${id}/edit`);
+}
+
+// ==========================================
+// ฟังก์ชันสำหรับผู้บริหาร: อนุมัติแผนงาน
+// ==========================================
+export async function approvePlan(formData: FormData) {
+  const id = formData.get("id") as string;
+  if (!id) return;
+
+  await prisma.tb_planning.update({
+    where: { pl_aid: BigInt(id) },
+    data: { status: "APPROVED" }
+  });
+
+  revalidatePath('/planning');
+  revalidatePath(`/planning/${id}/edit`);
+}
+
+// ==========================================
+// ฟังก์ชันสำหรับผู้บริหาร: ไม่อนุมัติ (ตีกลับ)
+// ==========================================
+export async function rejectPlan(formData: FormData) {
+  const id = formData.get("id") as string;
+  if (!id) return;
+
+  await prisma.tb_planning.update({
+    where: { pl_aid: BigInt(id) },
+    data: { status: "REJECTED" }
+  });
+
+  revalidatePath('/planning');
+  revalidatePath(`/planning/${id}/edit`);
+}
