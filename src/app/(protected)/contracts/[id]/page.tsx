@@ -2,7 +2,7 @@ import { prisma } from "../../../../lib/prisma";
 import { 
   ArrowLeft, FileText, User, Calendar, BadgeDollarSign, 
   Briefcase, Users, Plus, Trash2, ShieldCheck,
-  HardDrive, FileUp, File, Download, Edit3, CopyPlus, Clock
+  HardDrive, FileUp, File, Download, Edit3, CopyPlus, Clock, Lock
 } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -53,6 +53,9 @@ export default async function ContractDetailPage({
     return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
+  // 🔐 💡 ตรวจสอบว่าสัญญาถูกล็อกหรือไม่ (COMPLETED หรือ CANCELLED)
+  const isLocked = contract.contract_status === 'COMPLETED' || contract.contract_status === 'CANCELLED';
+
   return (
     <div className="p-8 max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
       
@@ -81,14 +84,21 @@ export default async function ContractDetailPage({
             </button>
           </form>
 
-          {/* ✏️ ปุ่มแก้ไขสัญญา (Task 2.4) */}
-          <Link 
-            href={`/contracts/${id}/edit`}
-            className="flex items-center gap-2 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black px-5 py-2.5 rounded-xl border border-amber-500/20 transition-all text-sm font-bold shadow-lg shadow-amber-500/5 active:scale-95"
-          >
-            <Edit3 size={16} />
-            แก้ไขข้อมูลสัญญา
-          </Link>
+          {/* ✏️ ปุ่มแก้ไขสัญญา (จะโชว์เฉพาะตอนที่ยังไม่โดนล็อก) */}
+          {!isLocked ? (
+            <Link 
+              href={`/contracts/${id}/edit`}
+              className="flex items-center gap-2 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black px-5 py-2.5 rounded-xl border border-amber-500/20 transition-all text-sm font-bold shadow-lg shadow-amber-500/5 active:scale-95"
+            >
+              <Edit3 size={16} />
+              แก้ไขข้อมูลสัญญา
+            </Link>
+          ) : (
+            <div className="flex items-center gap-2 bg-gray-800 text-gray-500 px-5 py-2.5 rounded-xl border border-gray-700 text-sm font-bold cursor-not-allowed">
+              <Lock size={16} />
+              สัญญานี้ถูกล็อกการแก้ไขแล้ว
+            </div>
+          )}
         </div>
       </div>
 
@@ -114,7 +124,7 @@ export default async function ContractDetailPage({
             <div className="bg-black/40 p-8 rounded-[2rem] border border-gray-800 min-w-[280px] backdrop-blur-md">
                <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] mb-4">Current Status</p>
                <div className="flex items-center gap-4">
-                  <div className={`w-4 h-4 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.6)] ${contract.contract_status === 'ACTIVE' ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+                  <div className={`w-4 h-4 rounded-full ${contract.contract_status === 'ACTIVE' ? 'bg-green-500 animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.6)]' : contract.contract_status === 'COMPLETED' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]' : 'bg-orange-500'}`}></div>
                   <span className="text-2xl font-bold text-white tracking-tight uppercase">{contract.contract_status || 'ACTIVE'}</span>
                </div>
                <p className="text-[9px] text-gray-700 mt-4 uppercase font-bold italic tracking-widest">CTMNG_SECURE_ENCRYPTED</p>
@@ -122,7 +132,6 @@ export default async function ContractDetailPage({
           </div>
 
           {/* --- Section 2: Info Cards --- */}
-          {/* 🚀 ปรับแก้ Grid ให้รองรับข้อมูลวันที่เพิ่มขึ้น */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-14">
             
             <div className="p-8 bg-white/[0.02] rounded-[2rem] border border-white/5 shadow-inner group hover:border-[#38BDF8]/30 transition-all">
@@ -135,7 +144,6 @@ export default async function ContractDetailPage({
               </div>
             </div>
 
-            {/* 🚀 เพิ่ม Card สำหรับแสดงวันที่เริ่ม และ วันที่สิ้นสุด */}
             <div className="p-8 bg-white/[0.02] rounded-[2rem] border border-white/5 shadow-inner group hover:border-[#10B981]/30 transition-all">
               <p className="text-[11px] text-emerald-600 uppercase font-black tracking-widest mb-3 italic">Start Date</p>
               <div className="flex items-center gap-4 text-xl md:text-2xl text-white font-bold tracking-tight">
@@ -179,27 +187,33 @@ export default async function ContractDetailPage({
                       <p className="text-[10px] text-gray-600 uppercase tracking-widest font-medium">{member.cmit_position || 'กรรมการ'}</p>
                     </div>
                   </div>
-                  <form action={deleteCommittee}>
-                    <input type="hidden" name="cmit_aid" value={member.cmit_aid.toString()} />
-                    <input type="hidden" name="base_id" value={id} />
-                    <button type="submit" className="text-gray-700 hover:text-red-500 p-2 transition-colors"><Trash2 size={16} /></button>
-                  </form>
+                  {/* 🔐 ซ่อนปุ่มลบกรรมการถ้าสัญญาโดนล็อก */}
+                  {!isLocked && (
+                    <form action={deleteCommittee}>
+                      <input type="hidden" name="cmit_aid" value={member.cmit_aid.toString()} />
+                      <input type="hidden" name="base_id" value={id} />
+                      <button type="submit" className="text-gray-700 hover:text-red-500 p-2 transition-colors"><Trash2 size={16} /></button>
+                    </form>
+                  )}
                 </div>
               ))}
             </div>
 
-            <form action={addCommittee} className="bg-black/20 p-6 rounded-[2rem] border border-dashed border-gray-800 flex flex-col md:flex-row gap-4">
-              <input type="hidden" name="base_id" value={id} />
-              <input name="cmit_name" placeholder="ชื่อ-นามสกุล..." required className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-5 py-3 text-white focus:border-[#0EA5E9] outline-none text-sm transition-all" />
-              <select name="cmit_position" className="md:w-64 bg-gray-900 border border-gray-800 rounded-xl px-5 py-3 text-white focus:border-[#0EA5E9] outline-none text-sm cursor-pointer">
-                <option value="กรรมการ">กรรมการ</option>
-                <option value="ประธานกรรมการ">ประธานกรรมการ</option>
-                <option value="กรรมการและเลขานุการ">กรรมการและเลขานุการ</option>
-              </select>
-              <button type="submit" className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white font-black rounded-xl px-8 py-3 flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95">
-                <Plus size={18} /> เพิ่มรายชื่อ
-              </button>
-            </form>
+            {/* 🔐 ซ่อนฟอร์มเพิ่มกรรมการถ้าสัญญาโดนล็อก */}
+            {!isLocked && (
+              <form action={addCommittee} className="bg-black/20 p-6 rounded-[2rem] border border-dashed border-gray-800 flex flex-col md:flex-row gap-4">
+                <input type="hidden" name="base_id" value={id} />
+                <input name="cmit_name" placeholder="ชื่อ-นามสกุล..." required className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-5 py-3 text-white focus:border-[#0EA5E9] outline-none text-sm transition-all" />
+                <select name="cmit_position" className="md:w-64 bg-gray-900 border border-gray-800 rounded-xl px-5 py-3 text-white focus:border-[#0EA5E9] outline-none text-sm cursor-pointer">
+                  <option value="กรรมการ">กรรมการ</option>
+                  <option value="ประธานกรรมการ">ประธานกรรมการ</option>
+                  <option value="กรรมการและเลขานุการ">กรรมการและเลขานุการ</option>
+                </select>
+                <button type="submit" className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white font-black rounded-xl px-8 py-3 flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95">
+                  <Plus size={18} /> เพิ่มรายชื่อ
+                </button>
+              </form>
+            )}
           </div>
 
           {/* --- Section 4: เอกสารแนบสัญญา (MinIO) --- */}
@@ -225,12 +239,15 @@ export default async function ContractDetailPage({
                     </div>
                     <div className="flex items-center gap-2">
                       <a href={downloadUrl} target="_blank" className="p-3 text-gray-500 hover:text-[#38BDF8] transition-colors" title="Download"><Download size={18} /></a>
-                      <form action={deleteFile}>
-                        <input type="hidden" name="file_aid" value={file.file_aid.toString()} />
-                        <input type="hidden" name="base_id" value={id} />
-                        <input type="hidden" name="file_path" value={file.file_path} />
-                        <button type="submit" className="p-3 text-gray-700 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
-                      </form>
+                      {/* 🔐 ซ่อนปุ่มลบไฟล์ถ้าสัญญาโดนล็อก */}
+                      {!isLocked && (
+                        <form action={deleteFile}>
+                          <input type="hidden" name="file_aid" value={file.file_aid.toString()} />
+                          <input type="hidden" name="base_id" value={id} />
+                          <input type="hidden" name="file_path" value={file.file_path} />
+                          <button type="submit" className="p-3 text-gray-700 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                        </form>
+                      )}
                     </div>
                   </div>
                 );
@@ -238,16 +255,19 @@ export default async function ContractDetailPage({
               {files.length === 0 && <div className="py-12 text-center border-2 border-dashed border-gray-800 rounded-[2rem] text-gray-700 italic text-sm">NO_ATTACHMENTS_FOUND_FOR_THIS_CONTRACT</div>}
             </div>
 
-            <form action={uploadFile} className="bg-[#0EA5E9]/5 p-6 rounded-[2rem] border border-[#0EA5E9]/20 flex flex-col md:flex-row items-center gap-4 shadow-inner">
-              <input type="hidden" name="base_id" value={id} />
-              <label className="flex-1 w-full flex items-center justify-center h-14 px-5 bg-gray-900 border-2 border-gray-800 border-dashed rounded-2xl cursor-pointer hover:border-[#0EA5E9] transition-all group">
-                <span className="text-sm text-gray-500 flex items-center gap-3 group-hover:text-white transition-colors"><FileUp size={20} /> เลือกไฟล์ PDF หรือรูปภาพประกอบสัญญา...</span>
-                <input type="file" name="file" className="hidden" required />
-              </label>
-              <button type="submit" className="w-full md:w-auto px-10 h-14 bg-[#0EA5E9] hover:bg-[#0284C7] text-white font-black rounded-2xl transition-all shadow-xl shadow-[#0EA5E9]/20 flex items-center justify-center gap-3 active:scale-95">
-                <Plus size={20} /> อัปโหลดไฟล์
-              </button>
-            </form>
+            {/* 🔐 ซ่อนฟอร์มอัปโหลดไฟล์ถ้าสัญญาโดนล็อก */}
+            {!isLocked && (
+              <form action={uploadFile} className="bg-[#0EA5E9]/5 p-6 rounded-[2rem] border border-[#0EA5E9]/20 flex flex-col md:flex-row items-center gap-4 shadow-inner">
+                <input type="hidden" name="base_id" value={id} />
+                <label className="flex-1 w-full flex items-center justify-center h-14 px-5 bg-gray-900 border-2 border-gray-800 border-dashed rounded-2xl cursor-pointer hover:border-[#0EA5E9] transition-all group">
+                  <span className="text-sm text-gray-500 flex items-center gap-3 group-hover:text-white transition-colors"><FileUp size={20} /> เลือกไฟล์ PDF หรือรูปภาพประกอบสัญญา...</span>
+                  <input type="file" name="file" className="hidden" required />
+                </label>
+                <button type="submit" className="w-full md:w-auto px-10 h-14 bg-[#0EA5E9] hover:bg-[#0284C7] text-white font-black rounded-2xl transition-all shadow-xl shadow-[#0EA5E9]/20 flex items-center justify-center gap-3 active:scale-95">
+                  <Plus size={20} /> อัปโหลดไฟล์
+                </button>
+              </form>
+            )}
           </div>
 
           {/* --- Section 5: งบประมาณ (Items) --- */}
@@ -300,5 +320,4 @@ export default async function ContractDetailPage({
       </div>
     </div>
   );
-}
 }
