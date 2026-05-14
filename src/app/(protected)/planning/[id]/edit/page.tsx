@@ -2,13 +2,16 @@ import { prisma } from "../../../../../lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { 
-  ArrowLeft, Save, Plus, Trash2, Briefcase, LayoutDashboard, Info
+  ArrowLeft, Save, Plus, Trash2, Briefcase, LayoutDashboard, Info, Send
 } from "lucide-react";
 import { 
   updatePlanning, 
   addPlanningItem, 
   updatePlanningItem, 
-  deletePlanningItem 
+  deletePlanningItem,
+  sendPlanForApproval,
+  approvePlan, // 🚀 นำเข้าฟังก์ชันอนุมัติ
+  rejectPlan   // 🚀 นำเข้าฟังก์ชันตีกลับ
 } from "../../actions";
 
 export default async function EditPlanningPage({ params }: { params: Promise<{ id: string }> }) {
@@ -24,10 +27,11 @@ export default async function EditPlanningPage({ params }: { params: Promise<{ i
   return (
     <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-500 space-y-10">
       
+      {/* --- ส่วนหัว --- */}
       <div className="flex justify-between items-center">
-        <Link href={`/planning/${id}`} className="flex items-center gap-2 text-gray-500 hover:text-emerald-500 transition-all w-fit group">
+        <Link href={`/planning`} className="flex items-center gap-2 text-gray-500 hover:text-emerald-500 transition-all w-fit group">
           <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="text-sm font-bold font-mono tracking-tighter uppercase">Cancel & Back</span>
+          <span className="text-sm font-bold font-mono tracking-tighter uppercase">Back to Plans</span>
         </Link>
         <div className="flex items-center gap-2 text-gray-600">
           <LayoutDashboard size={16} />
@@ -37,55 +41,107 @@ export default async function EditPlanningPage({ params }: { params: Promise<{ i
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         
-        {/* --- ฝั่งซ้าย: ข้อมูลแผนหลัก --- */}
+        {/* ========================================== */}
+        {/* ฝั่งซ้าย: ข้อมูลแผนหลัก & ปุ่ม Action ต่างๆ */}
+        {/* ========================================== */}
         <div className="lg:col-span-4">
-          <div className="bg-gray-900 rounded-[2.5rem] border border-gray-800 shadow-2xl overflow-hidden sticky top-8">
-            <div className="h-2 w-full bg-gradient-to-r from-emerald-400 to-teal-600"></div>
+          
+          {/* 🚀 ใช้ sticky ครอบทั้งหมดตรงนี้ เพื่อให้เลื่อนไปพร้อมกันโดยไม่ทับกัน */}
+          <div className="sticky top-8 space-y-6">
             
-            <form action={updatePlanning} className="p-8 space-y-7">
-              <input type="hidden" name="id" value={id} />
+            {/* กล่องที่ 1: ข้อมูลแผนงาน (ฟอร์มบันทึกร่าง) */}
+            <div className="bg-gray-900 rounded-[2.5rem] border border-gray-800 shadow-2xl overflow-hidden">
+              <div className="h-2 w-full bg-gradient-to-r from-emerald-400 to-teal-600"></div>
               
-              <div className="flex items-center gap-3 border-b border-gray-800 pb-5">
-                <div className="p-2 bg-emerald-500/10 rounded-lg">
-                  <Info className="text-emerald-500" size={20} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black text-white italic uppercase tracking-tight">Plan Details</h2>
-                </div>
-              </div>
-
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Plan Name</label>
-                  <textarea name="pl_name" defaultValue={plan.pl_name ?? ""} rows={4} className="w-full bg-black/50 border border-gray-800 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 outline-none transition-all text-sm resize-none shadow-inner" required />
-                </div>
+              <form action={updatePlanning} className="p-8 space-y-7">
+                <input type="hidden" name="id" value={id} />
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Budget Year</label>
-                    <input name="pl_year" type="number" defaultValue={plan.pl_year ?? ""} className="w-full bg-black/50 border border-gray-800 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 outline-none transition-all text-sm font-mono shadow-inner text-center" required />
+                <div className="flex items-center gap-3 border-b border-gray-800 pb-5">
+                  <div className="p-2 bg-emerald-500/10 rounded-lg">
+                    <Info className="text-emerald-500" size={20} />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Status</label>
-                    <select name="status" defaultValue={plan.status ?? "DRAFT"} className="w-full bg-black/50 border border-gray-800 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 outline-none transition-all text-sm shadow-inner cursor-pointer font-bold">
-                      <option value="DRAFT">DRAFT (ร่าง)</option>
-                      <option value="ACTIVE">ACTIVE (ใช้งาน)</option>
-                      <option value="COMPLETED">COMPLETED (เสร็จสิ้น)</option>
-                      <option value="APPROVED" className="bg-emerald-100 font-bold">APPROVED (อนุมัติแล้ว)</option>
-                      <option value="CANCELLED">CANCELLED (ยกเลิก)</option>
-                    </select>
+                  <div>
+                    <h2 className="text-xl font-black text-white italic uppercase tracking-tight">Plan Details</h2>
                   </div>
                 </div>
-              </div>
 
-              <button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/10 active:scale-95">
-                <Save size={20} /> บันทึกข้อมูลแผนงาน
-              </button>
-            </form>
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Plan Name</label>
+                    <textarea name="pl_name" defaultValue={plan.pl_name ?? ""} rows={4} className="w-full bg-black/50 border border-gray-800 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 outline-none transition-all text-sm resize-none shadow-inner" required />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Budget Year</label>
+                      <input name="pl_year" type="number" defaultValue={plan.pl_year ?? ""} className="w-full bg-black/50 border border-gray-800 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 outline-none transition-all text-sm font-mono shadow-inner text-center" required />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Current Status</label>
+                      <div className={`w-full border rounded-2xl px-5 py-3 text-sm shadow-inner font-bold text-center flex items-center justify-center ${
+                        plan.status === 'WAITING' ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' :
+                        plan.status === 'APPROVED' ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' :
+                        plan.status === 'REJECTED' ? 'bg-red-500/10 border-red-500/30 text-red-500' :
+                        'bg-gray-800 border-gray-700 text-gray-400'
+                      }`}>
+                        {plan.status || 'DRAFT'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <button type="submit" className="w-full bg-gray-800 hover:bg-gray-700 text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-3 active:scale-95">
+                  <Save size={20} /> บันทึกข้อมูล (Save Draft)
+                </button>
+              </form>
+            </div>
+
+            {/* กล่องที่ 2: สำหรับพนักงาน (ส่งขออนุมัติ) - โชว์เฉพาะตอน DRAFT หรือ REJECTED */}
+            {(plan.status === 'DRAFT' || plan.status === 'REJECTED' || !plan.status) && (
+               <div className="bg-amber-500/10 border border-amber-500/30 rounded-[2.5rem] p-6 shadow-xl text-center space-y-4">
+                  <div>
+                    <h3 className="text-amber-500 font-black text-lg">พร้อมใช้งานจริงหรือไม่?</h3>
+                    <p className="text-amber-500/70 text-xs mt-1">เมื่อส่งขออนุมัติแล้ว จะเปลี่ยนสถานะเป็น WAITING</p>
+                  </div>
+                  <form action={sendPlanForApproval}>
+                    <input type="hidden" name="id" value={id} />
+                    <button type="submit" className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-amber-500/20 active:scale-95">
+                      <Send size={20} /> ส่งขออนุมัติ (Send to Manager)
+                    </button>
+                  </form>
+               </div>
+            )}
+
+            {/* กล่องที่ 3: สำหรับผู้บริหาร (อนุมัติ / ตีกลับ) - โชว์เฉพาะตอน WAITING */}
+            {plan.status === 'WAITING' && (
+               <div className="bg-blue-500/10 border border-blue-500/30 rounded-[2.5rem] p-6 shadow-xl space-y-4">
+                  <div className="text-center mb-2">
+                    <h3 className="text-blue-400 font-black text-lg">สำหรับผู้บริหาร (Manager)</h3>
+                    <p className="text-blue-400/70 text-xs mt-1">ตรวจสอบความถูกต้องและดำเนินการ</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <form action={approvePlan} className="flex-1">
+                      <input type="hidden" name="id" value={id} />
+                      <button type="submit" className="w-full bg-blue-500 hover:bg-blue-400 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95">
+                        ✅ อนุมัติ
+                      </button>
+                    </form>
+                    <form action={rejectPlan} className="flex-1">
+                      <input type="hidden" name="id" value={id} />
+                      <button type="submit" className="w-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-black py-3 rounded-xl transition-all border border-red-500/20 hover:border-transparent active:scale-95">
+                        ❌ ตีกลับ
+                      </button>
+                    </form>
+                  </div>
+               </div>
+            )}
+
           </div>
         </div>
 
-        {/* --- ฝั่งขวา: จัดการงบประมาณ --- */}
+        {/* ========================================== */}
+        {/* ฝั่งขวา: จัดการงบประมาณ (รายการย่อย) */}
+        {/* ========================================== */}
         <div className="lg:col-span-8 space-y-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-900/50 p-6 rounded-[2rem] border border-gray-800">
             <div>
