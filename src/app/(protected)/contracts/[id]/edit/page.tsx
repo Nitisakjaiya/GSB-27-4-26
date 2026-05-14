@@ -1,5 +1,5 @@
 import { prisma } from "../../../../../lib/prisma";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation"; // 🚀 อย่าลืม import redirect
 import { 
   updateContract, 
   addContractItem, 
@@ -39,6 +39,13 @@ export default async function EditContractPage({
 
   if (!contract || contract.is_deleted === 1) notFound();
 
+  // 🔐 💡 ป้องกันการแอบเข้าหน้า Edit ผ่าน URL ถ้าสัญญาปิดไปแล้ว
+  const isLocked = contract.contract_status === 'COMPLETED' || contract.contract_status === 'CANCELLED';
+  if (isLocked) {
+    // ถ้าโดนล็อกแล้ว ให้เตะกลับไปหน้า Detail ทันที
+    redirect(`/contracts/${id}`);
+  }
+
   // 🚀 Helper: แปลง Date object เป็น String format "YYYY-MM-DD" เพื่อใช้เป็น defaultValue ใน input type="date"
   const formatDateForInput = (date: Date | null) => {
     if (!date) return "";
@@ -68,7 +75,6 @@ export default async function EditContractPage({
         {/* --- ฝั่งซ้าย: แก้ไขข้อมูลหลัก (Main Info) --- */}
         <div className="lg:col-span-4">
           <div className="bg-gray-900 rounded-[2.5rem] border border-gray-800 shadow-2xl overflow-hidden sticky top-8">
-            {/* 🚀 ปรับแถบสีด้านบนให้เป็นโทนชมพูออมสิน */}
             <div className="h-2 w-full bg-gradient-to-r from-[#EB005D] to-pink-700"></div>
             
             <form action={updateContract} className="p-8 space-y-7">
@@ -123,7 +129,6 @@ export default async function EditContractPage({
                 </div>
 
                 {/* วันที่เริ่ม และ วันสิ้นสุดสัญญา */}
-                {/* 🌟 เพิ่มช่อง: สัญญาลงวันที่ (ct_date) */}
                 <div className="space-y-2 pt-4 border-t border-gray-800/50">
                   <label className="flex items-center gap-1.5 text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">
                     <Calendar size={12} /> สัญญาลงวันที่ (Contract Date)
@@ -137,7 +142,6 @@ export default async function EditContractPage({
                   />
                 </div>
 
-                {/* วันที่เริ่ม และ วันสิ้นสุดสัญญา */}
                 <div className="grid grid-cols-2 gap-4 pt-2">
                    <div className="space-y-2">
                      <label className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">
@@ -165,7 +169,6 @@ export default async function EditContractPage({
 
               </div>
 
-              {/* 🚀 ปรับปุ่มเซฟหลักให้เป็นสีชมพู */}
               <button 
                 type="submit" 
                 className="w-full bg-[#EB005D] hover:bg-[#c4004e] text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-pink-500/20 active:scale-95"
@@ -190,7 +193,6 @@ export default async function EditContractPage({
             </div>
           </div>
 
-          {/* รายการที่มีอยู่ (Editable List) */}
           <div className="space-y-5">
             {contract.items.map((item) => (
               <form 
@@ -220,7 +222,6 @@ export default async function EditContractPage({
                 </div>
                 
                 <div className="md:col-span-2 flex gap-2">
-                  {/* ปุ่มบันทึกรายการรายแถว (Save Item) */}
                   <button 
                     type="submit" 
                     className="flex-1 bg-[#EB005D]/10 hover:bg-[#EB005D] text-[#EB005D] hover:text-white p-3 rounded-xl border border-[#EB005D]/20 transition-all flex items-center justify-center group/btn shadow-lg"
@@ -229,7 +230,6 @@ export default async function EditContractPage({
                     <Save size={18} className="group-hover/btn:scale-110 transition-transform" />
                   </button>
                   
-                  {/* ปุ่มลบรายการ (Delete Item) */}
                   <button 
                     formAction={deleteContractItem} 
                     className="p-3 bg-red-500/5 hover:bg-red-500 text-gray-700 hover:text-white rounded-xl border border-transparent hover:border-red-500/50 transition-all flex items-center justify-center shadow-lg"
@@ -242,7 +242,6 @@ export default async function EditContractPage({
             ))}
           </div>
 
-          {/* ฟอร์มเพิ่มรายการใหม่ (Add New Item Section) */}
           <div className="bg-[#EB005D]/[0.02] p-10 rounded-[3rem] border border-dashed border-[#EB005D]/20 shadow-inner">
             <div className="flex items-center gap-3 mb-8">
               <div className="p-2 bg-[#EB005D] rounded-lg shadow-lg shadow-[#EB005D]/20">
