@@ -1,20 +1,19 @@
 import { prisma } from "../../../lib/prisma";
 import Link from "next/link";
-import { DeleteButton } from "./DeleteButton"; // นำเข้า Client Component ที่เราแยกไว้
-import { deletePlanning } from "./actions"; // นำเข้า Action สำหรับลบข้อมูล
+import { DeleteButton } from "./DeleteButton"; 
+import { deletePlanning } from "./actions"; 
 
+// 🚀 1. นำเข้าระบบ Auth และ Icon แจ้งเตือน
+import { auth } from "../../../auth";
 import { 
-  FolderKanban, 
-  Calendar, 
-  Activity, 
-  Eye, 
-  Plus, 
-  Search,
-  BadgeDollarSign
+  FolderKanban, Calendar, Activity, Eye, Plus, Search, BadgeDollarSign, Bell
 } from "lucide-react";
 
 export default async function PlanningListPage() {
-  // ดึงข้อมูลแผนงานทั้งหมดที่ยังไม่ถูกลบ เรียงตามปีล่าสุด และวันที่สร้าง
+  // 🚀 2. ดึงข้อมูล User Session
+  const session = await auth();
+  const userRole = session?.user?.role;
+
   const plans = await prisma.tb_planning.findMany({
     where: { is_deleted: 0 },
     include: { items: { where: { is_deleted: 0 } } },
@@ -24,7 +23,6 @@ export default async function PlanningListPage() {
     ]
   });
 
-  // คำนวณสถิติเบื้องต้น
   const totalPlans = plans.length;
   const activePlans = plans.filter(p => p.status === 'ACTIVE').length;
   const draftPlans = plans.filter(p => p.status === 'DRAFT').length;
@@ -46,7 +44,6 @@ export default async function PlanningListPage() {
           </p>
         </div>
 
-        {/* ปุ่มสร้างแผนงานใหม่แบบ Manual */}
         <Link 
           href="/planning/new" 
           className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black px-6 py-3 rounded-2xl transition-all font-black shadow-lg shadow-emerald-500/20 active:scale-95"
@@ -135,7 +132,9 @@ export default async function PlanningListPage() {
                         <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
                           plan.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
                           plan.status === 'COMPLETED' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 
-                          'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                          plan.status === 'WAITING' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                          plan.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                          'bg-gray-800 border-gray-700 text-gray-400'
                         }`}>
                           {plan.status || 'DRAFT'}
                         </span>
@@ -143,7 +142,16 @@ export default async function PlanningListPage() {
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex justify-center items-center gap-2">
-                        {/* ปุ่มดูรายละเอียด (ของเดิม) */}
+                        
+                        {/* 🚀 3. เรดาร์แจ้งเตือน: โชว์เฉพาะ MANAGER และแผนงานที่รออนุมัติ */}
+                        {userRole === 'MANAGER' && plan.status === 'WAITING' && (
+                          <div className="relative group/notify">
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-ping"></div>
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-600 rounded-full border border-black/50"></div>
+                            <Bell size={18} className="text-orange-500 animate-bounce duration-[2000ms]" />
+                          </div>
+                        )}
+
                         <Link 
                           href={`/planning/${plan.pl_aid}`}
                           className="p-2 bg-gray-800/50 hover:bg-emerald-500 text-gray-400 hover:text-black rounded-xl transition-all shadow-lg active:scale-95"
@@ -152,7 +160,6 @@ export default async function PlanningListPage() {
                           <Eye size={18} />
                         </Link>
 
-                        {/* ปุ่มลบแผนงาน (เรียกใช้ Client Component) */}
                         <form action={deletePlanning.bind(null, plan.pl_aid.toString())}>
                           <DeleteButton />
                         </form>
@@ -161,18 +168,6 @@ export default async function PlanningListPage() {
                   </tr>
                 );
               })}
-
-              {plans.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-8 py-16 text-center">
-                    <div className="inline-flex flex-col items-center justify-center text-gray-600">
-                      <FolderKanban size={48} className="mb-4 opacity-20" />
-                      <p className="font-bold text-lg">ยังไม่มีข้อมูลแผนงาน</p>
-                      <p className="text-sm mt-1">เริ่มสร้างแผนงานใหม่จากเมนูสัญญา หรือกดสร้างใหม่ด้านบน</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
