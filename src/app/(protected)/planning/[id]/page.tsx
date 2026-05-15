@@ -17,14 +17,16 @@ import {
   Download,
   Info,
   Wallet,
-  FilePlus2 // เพิ่ม Icon สำหรับปุ่มทำสัญญา
+  FilePlus2,
+  CheckCircle // 🚀 เพิ่ม Icon สำหรับปุ่มอนุมัติ
 } from "lucide-react";
 
-// ดึงฟังก์ชันช่วยดาวน์โหลดจาก Contract Actions มาใช้ร่วมกัน
 import { getDownloadUrl } from "../../contracts/actions";
-
-// นำเข้าฟังก์ชันแปลงแผนเป็นสัญญา (ประธานต้องสร้างไฟล์ actions.ts ไว้ในโฟลเดอร์เดียวกันนี้)
 import { convertPlanToContract } from "./actions";
+
+// 🚀 1. นำเข้าระบบ Auth และตัวรีเฟรชหน้าเว็บ
+import { auth } from "../../../../auth";
+import { revalidatePath } from "next/cache";
 
 export default async function PlanningDetailPage({ 
   params 
@@ -33,7 +35,10 @@ export default async function PlanningDetailPage({
 }) {
   const { id } = await params;
 
-  // 1. ดึงข้อมูลแผนงาน และ รายการย่อย
+  // 🚀 2. ดึงข้อมูลว่าใคร Login อยู่ และมีสิทธิ์อะไร?
+  const session = await auth();
+  const userRole = session?.user?.role; // 'MANAGER' หรือ 'STAFF'
+
   const plan = await prisma.tb_planning.findUnique({
     where: { pl_aid: BigInt(id) },
     include: { items: { where: { is_deleted: 0 } } }
@@ -41,7 +46,6 @@ export default async function PlanningDetailPage({
 
   if (!plan || plan.is_deleted === 1) notFound();
 
-  // 2. ดึงข้อมูลสัญญาต้นทาง (ถ้ามี)
   let sourceContract = null;
   let refCommittees: any[] = [];
   let refFiles: any[] = [];
@@ -51,7 +55,6 @@ export default async function PlanningDetailPage({
       where: { ct_aid: plan.ref_contract_id }
     });
 
-    // Task 3.8: ดึงข้อมูลกรรมการจากสัญญาต้นทาง
     refCommittees = await prisma.tb_committees.findMany({
       where: { 
         base_id: plan.ref_contract_id, 
@@ -61,7 +64,6 @@ export default async function PlanningDetailPage({
       orderBy: { created_at: 'asc' }
     });
 
-    // Task 3.8: ดึงข้อมูลไฟล์จากสัญญาต้นทาง
     refFiles = await prisma.tb_files.findMany({
       where: { 
         base_id: plan.ref_contract_id, 
@@ -72,7 +74,6 @@ export default async function PlanningDetailPage({
     });
   }
 
-  // 3. ดึงข้อมูลประวัติการติดตามสถานะ (Tracking Records - Task 4.1)
   const rawTrackingRecords = await prisma.tb_tracking.findMany({
     where: { 
       base_id: BigInt(id), 
@@ -82,13 +83,11 @@ export default async function PlanningDetailPage({
     orderBy: { trk_date: 'desc' }
   });
 
-  // แปลง Decimal เป็น Number สำหรับ Client Component
   const trackingRecords = rawTrackingRecords.map(record => ({
     ...record,
     disbursed_amount: record.disbursed_amount ? Number(record.disbursed_amount) : null,
   }));
 
-  // 4. ดึงข้อมูลการจัดสรรงบประมาณรายปี (Budget Allocation - Task 4.3)
   const rawBudgets = await prisma.tb_budget_allocation.findMany({
     where: { 
       base_id: BigInt(id), 
@@ -103,7 +102,6 @@ export default async function PlanningDetailPage({
     allocated_amount: Number(b.allocated_amount)
   }));
 
-  // คำนวณยอดรวมงบประมาณจากรายการย่อย
   const totalBudget = plan.items.reduce((sum, item) => sum + Number(item.pli_budget || 0), 0);
 
   return (
@@ -117,13 +115,35 @@ export default async function PlanningDetailPage({
         </Link>
 
         <div className="flex gap-3">
-          {/* 🌟 ปุ่มใหม่: โผล่มาเฉพาะเมื่อ status = APPROVED */}
+          
+          {/* 🛡️ 3. กางโล่: ปุ่มอนุมัติ จะแสดงเฉพาะ MANAGER และสถานะยังไม่อนุมัติ */}
+          {userRole === 'MANAGER' && plan.status !== 'APPROVED' && (
+            <form action={async () => {
+              "use server";
+              // อัปเดตสถานะใน Database
+              await prisma.tb_planning.update({
+                where: { pl_aid: BigInt(id) },
+                data: { status: 'APPROVED' }
+              });
+              // สั่งรีเฟรชหน้าเว็บเพื่อแสดงสถานะใหม่ทันที
+              revalidatePath(`/planning/${id}`);
+            }}>
+              <button 
+                type="submit"
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white px-5 py-2.5 rounded-xl transition-all text-sm font-black shadow-lg shadow-blue-500/20 active:scale-95"
+              >
+                <CheckCircle size={16} />
+                อนุมัติแผนงาน
+              </button>
+            </form>
+          )}
+
+          {/* ปุ่มทำสัญญา: โผล่มาเฉพาะเมื่อ status = APPROVED */}
           {plan.status === "APPROVED" && (
             <form action={async () => {
               "use server";
               const res = await convertPlanToContract(plan.pl_aid.toString());
               if (res.success && res.newContractId) {
-                // ถ้าสำเร็จวาร์ปไปหน้า Edit ของสัญญาใหม่
                 redirect(`/contracts/${res.newContractId}/edit`);
               }
             }}>
@@ -137,13 +157,16 @@ export default async function PlanningDetailPage({
             </form>
           )}
 
-          <Link 
-            href={`/planning/${id}/edit`}
-            className="flex items-center gap-2 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black px-5 py-2.5 rounded-xl border border-amber-500/20 transition-all text-sm font-bold shadow-lg shadow-amber-500/5 active:scale-95"
-          >
-            <Edit3 size={16} />
-            แก้ไขแผนงาน
-          </Link>
+          {/* ซ่อนปุ่มแก้ไขถ้าแผนงานถูกอนุมัติไปแล้ว (ตัวเลือกเสริมความปลอดภัย) */}
+          {plan.status !== 'APPROVED' && (
+            <Link 
+              href={`/planning/${id}/edit`}
+              className="flex items-center gap-2 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black px-5 py-2.5 rounded-xl border border-amber-500/20 transition-all text-sm font-bold shadow-lg shadow-amber-500/5 active:scale-95"
+            >
+              <Edit3 size={16} />
+              แก้ไขแผนงาน
+            </Link>
+          )}
         </div>
       </div>
 
@@ -174,22 +197,21 @@ export default async function PlanningDetailPage({
               )}
             </div>
 
-           <div className="bg-black/40 p-8 rounded-[2rem] border border-gray-800 min-w-[280px] backdrop-blur-md">
-   <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-4">Current Status</p>
-   <div className="flex items-center gap-4">
-      {/* 🟢 ใช้ .toUpperCase() เพื่อให้เช็กเงื่อนไขได้เป๊ะๆ ไม่ว่า DB จะพิมพ์มาแบบไหน */}
-      <div className={`w-4 h-4 rounded-full ${
-        plan.status?.toUpperCase() === 'ACTIVE' ? 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.6)]' : 
-        plan.status?.toUpperCase() === 'COMPLETED' ? 'bg-blue-500' : 
-        plan.status?.toUpperCase() === 'APPROVED' ? 'bg-emerald-400' : 
-        plan.status?.toUpperCase() === 'CANCELLED' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)]' : 
-        'bg-amber-500'
-      }`}></div>
-      <span className={`text-2xl font-bold tracking-tight uppercase italic ${plan.status?.toUpperCase() === 'CANCELLED' ? 'text-red-500' : 'text-white'}`}>
-        {plan.status}
-      </span>
-   </div>
-</div>
+            <div className="bg-black/40 p-8 rounded-[2rem] border border-gray-800 min-w-[280px] backdrop-blur-md">
+              <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-4">Current Status</p>
+              <div className="flex items-center gap-4">
+                <div className={`w-4 h-4 rounded-full ${
+                  plan.status?.toUpperCase() === 'ACTIVE' ? 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.6)]' : 
+                  plan.status?.toUpperCase() === 'COMPLETED' ? 'bg-blue-500' : 
+                  plan.status?.toUpperCase() === 'APPROVED' ? 'bg-emerald-400' : 
+                  plan.status?.toUpperCase() === 'CANCELLED' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)]' : 
+                  'bg-amber-500'
+                }`}></div>
+                <span className={`text-2xl font-bold tracking-tight uppercase italic ${plan.status?.toUpperCase() === 'CANCELLED' ? 'text-red-500' : 'text-white'}`}>
+                  {plan.status}
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* --- Section 2: Budget Items --- */}
@@ -300,7 +322,6 @@ export default async function PlanningDetailPage({
             </div>
           )}
 
-          {/* 💡 --- Section 4: Budget Allocation (Task 4.4) --- 💡 */}
           <div className="pt-10 border-t border-gray-800">
              <div className="mb-6 flex items-center gap-3">
                 <Wallet className="text-emerald-500" size={24} />
@@ -318,7 +339,6 @@ export default async function PlanningDetailPage({
              />
           </div>
 
-          {/* 💡 --- Section 5: Tracking & Progress (Phase 4) --- 💡 */}
           <div className="pt-10 border-t border-gray-800">
              <div className="mb-8">
                 <h3 className="text-2xl font-black text-[#0EA5E9] italic tracking-tight uppercase">Progress Tracking</h3>
@@ -332,7 +352,6 @@ export default async function PlanningDetailPage({
              />
           </div>
 
-          {/* Footer Info */}
           <div className="flex items-center justify-center gap-3 pt-10 border-t border-gray-800/50 opacity-20 hover:opacity-50 transition-opacity">
             <Info size={12} className="text-white" />
             <p className="text-[9px] text-white font-black uppercase tracking-[0.5em]">Planning Reference Module // Phase 4 Active</p>
