@@ -17,59 +17,29 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardPage() {
   const totalContracts = await prisma.tb_contract.count({ where: { is_deleted: 0 } });
   const totalPlans = await prisma.tb_planning.count({ where: { is_deleted: 0 } });
-  const pendingPlans = await prisma.tb_planning.count({
-    where: { is_deleted: 0, status: 'WAITING' }
-  });
+  const pendingPlans = await prisma.tb_planning.count({ where: { is_deleted: 0, status: 'WAITING' } });
 
-  const budgetResult = await prisma.tb_contract_items.aggregate({
-    _sum: { item_cost: true },
-    where: { is_deleted: 0 } 
-  });
+  const budgetResult = await prisma.tb_contract_items.aggregate({ _sum: { item_cost: true }, where: { is_deleted: 0 } });
   const totalBudget = Number(budgetResult._sum.item_cost || 0);
 
-  const statusGroups = await prisma.tb_contract.groupBy({
-    by: ['contract_status'], _count: { ct_aid: true }, where: { is_deleted: 0 }
-  });
-  const statusChartData = statusGroups.map(g => ({
-    name: g.contract_status || 'ACTIVE', value: g._count.ct_aid
-  }));
+  const statusGroups = await prisma.tb_contract.groupBy({ by: ['contract_status'], _count: { ct_aid: true }, where: { is_deleted: 0 } });
+  const statusChartData = statusGroups.map(g => ({ name: g.contract_status || 'ACTIVE', value: g._count.ct_aid }));
 
-  const budgetGroups = await prisma.tb_contract_items.groupBy({
-    by: ['item_type'], _sum: { item_cost: true }, where: { is_deleted: 0 }
-  });
-  const budgetChartData = budgetGroups.map(g => ({
-    name: g.item_type || 'ไม่ระบุ', Total: Number(g._sum.item_cost || 0)
-  }));
+  const budgetGroups = await prisma.tb_contract_items.groupBy({ by: ['item_type'], _sum: { item_cost: true }, where: { is_deleted: 0 } });
+  const budgetChartData = budgetGroups.map(g => ({ name: g.item_type || 'ไม่ระบุ', Total: Number(g._sum.item_cost || 0) }));
 
-  const rawExportData = await prisma.tb_contract.findMany({
-    where: { is_deleted: 0 }, orderBy: { created_at: 'desc' }
-  });
-  const exportExcelData = rawExportData.map(ct => ({
-    "เลขที่สัญญา": ct.ct_number || "-", "หมวดหมู่": ct.category_code || "-",
-    "ชื่อโครงการ": ct.ct_name || "-", "ผู้ประสานงาน": ct.coordinator_name || "-",
-    "สถานะสัญญา": ct.contract_status || "ACTIVE",
-    "วันที่เริ่ม": ct.start_date ? ct.start_date.toISOString().split('T')[0] : "-",
-    "วันหมดอายุ": ct.end_date ? ct.end_date.toISOString().split('T')[0] : "-"
-  }));
+  const rawExportData = await prisma.tb_contract.findMany({ where: { is_deleted: 0 }, orderBy: { created_at: 'desc' } });
+  const exportExcelData = rawExportData.map(ct => ({ "เลขที่สัญญา": ct.ct_number || "-", "หมวดหมู่": ct.category_code || "-", "ชื่อโครงการ": ct.ct_name || "-", "ผู้ประสานงาน": ct.coordinator_name || "-", "สถานะสัญญา": ct.contract_status || "ACTIVE", "วันที่เริ่ม": ct.start_date ? ct.start_date.toISOString().split('T')[0] : "-", "วันหมดอายุ": ct.end_date ? ct.end_date.toISOString().split('T')[0] : "-" }));
 
-  const recentContracts = await prisma.tb_contract.findMany({
-    where: { is_deleted: 0 }, orderBy: { created_at: 'desc' }, take: 10,
-  });
+  const recentContracts = await prisma.tb_contract.findMany({ where: { is_deleted: 0 }, orderBy: { created_at: 'desc' }, take: 10, });
 
   const today = new Date();
   const next30Days = new Date(new Date().setDate(today.getDate() + 30));
-  const expiringSoon = await prisma.tb_contract.findMany({
-    where: { is_deleted: 0, contract_status: "ACTIVE", end_date: { lte: next30Days, gte: today } },
-    orderBy: { end_date: 'asc' }, take: 5 
-  });
+  const expiringSoon = await prisma.tb_contract.findMany({ where: { is_deleted: 0, contract_status: "ACTIVE", end_date: { lte: next30Days, gte: today } }, orderBy: { end_date: 'asc' }, take: 5 });
 
-  const systemLogs = await prisma.tb_tracking.findMany({
-    where: { is_deleted: 0 }, orderBy: { trk_date: 'desc' }, take: 4
-  });
+  const systemLogs = await prisma.tb_tracking.findMany({ where: { is_deleted: 0 }, orderBy: { trk_date: 'desc' }, take: 4 });
 
-  const serializeData = (data: any) => {
-    return JSON.parse(JSON.stringify(data, (key, value) => typeof value === 'bigint' ? value.toString() : value));
-  };
+  const serializeData = (data: any) => JSON.parse(JSON.stringify(data, (key, value) => typeof value === 'bigint' ? value.toString() : value));
 
   const serializedRecent = serializeData(recentContracts);
   const serializedExpiring = serializeData(expiringSoon);
@@ -95,10 +65,10 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* --- ส่วน Summary Cards 4 ใบ (เปลี่ยนเป็นสีขาวฟุ้งๆ) --- */}
+      {/* --- ส่วน Summary Cards 4 ใบ (เปลี่ยนเป็นสีขาว) --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         
-        <div className="bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] border border-white shadow-xl shadow-slate-200/50 relative overflow-hidden group">
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-500">
             <FileText size={80} className="text-blue-500" />
           </div>
@@ -111,7 +81,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] border border-white shadow-xl shadow-slate-200/50 relative overflow-hidden group">
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-500">
             <Briefcase size={80} className="text-emerald-500" />
           </div>
@@ -124,7 +94,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] border border-white shadow-xl shadow-slate-200/50 relative overflow-hidden group">
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-500">
             <Clock size={80} className="text-amber-500" />
           </div>
@@ -137,7 +107,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-pink-50/80 backdrop-blur-xl p-6 rounded-[2rem] border border-pink-100 shadow-xl shadow-pink-500/10 relative overflow-hidden group">
+        <div className="bg-pink-50/80 p-6 rounded-[2rem] border border-pink-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-500">
             <Wallet size={80} className="text-[#EB005D]" />
           </div>
@@ -156,12 +126,14 @@ export default async function DashboardPage() {
 
       {/* --- ส่วนเนื้อหากราฟ และ Live Feed --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
+        
         <div className="lg:col-span-2">
+          {/* กราฟจะถูกเรนเดอร์จาก DashboardCharts.tsx ที่เราแก้เป็นสีขาวไปแล้ว */}
           <DashboardCharts statusData={statusChartData} budgetData={budgetChartData} />
         </div>
 
-        {/* 🚀 System Activity Feed (กล่องขาวฟุ้ง) */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] border border-white p-8 shadow-xl shadow-slate-200/50 flex flex-col">
+        {/* 🚀 System Activity Feed (เปลี่ยนเป็นสีขาว) */}
+        <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm flex flex-col">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-pink-50 rounded-xl"><Activity className="text-[#EB005D]" size={24} /></div>
             <h3 className="text-xl font-black text-slate-800 italic tracking-tighter">Live Audit Trail</h3>
@@ -202,6 +174,7 @@ export default async function DashboardPage() {
           <ExportExcelButton data={exportExcelData} />
         </div>
         
+        {/* ตารางจะถูกเรนเดอร์จาก DashboardClient.tsx ที่เราแก้เป็นสีขาวไปแล้ว */}
         <DashboardClient 
           totalContracts={totalContracts} 
           recentContracts={serializedRecent} 
