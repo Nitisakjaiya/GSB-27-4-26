@@ -1,7 +1,20 @@
-import NextAuth from "next-auth"
+import NextAuth, { DefaultSession } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { prisma } from "./lib/prisma"
 import bcrypt from "bcryptjs"
+
+// 🚀 💡 เพิ่มส่วนนี้: อัปเดต Type ให้ TypeScript รู้จักฟิลด์ role และ id
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      role: string;
+    } & DefaultSession["user"]
+  }
+  interface User {
+    role?: string;
+  }
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -42,10 +55,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
-        // 4. ส่งข้อมูล User กลับ (ใช้ user_aid เป็น ID)
+        // 🚀 4. ส่งข้อมูล User กลับ (แนบ role ไปด้วย!)
         return {
           id: user.user_aid.toString(),
           name: user.username,
+          role: user.role, // ดึงสิทธิ์จาก Database
         }
       },
     }),
@@ -54,12 +68,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
   callbacks: {
+    // 🚀 สเตป A: เอา role ยัดใส่ Token
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.role;
+      }
+      return token;
+    },
+    // 🚀 สเตป B: เอา role จาก Token ส่งไปให้หน้าเว็บ (Session)
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
+        session.user.role = token.role as string; // ส่งสิทธิ์ให้หน้าเว็บเอาไปเช็ก
       }
       return session;
     },
   },
 })
- 
