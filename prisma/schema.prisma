@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. ตารางพนักงาน (Authentication)
+// 1. ตารางพนักงาน (อัปเดตใหม่)
 model tb_user {
   user_aid   BigInt   @id @default(autoincrement())
   username   String   @unique @db.VarChar(50)
@@ -15,10 +15,13 @@ model tb_user {
   first_name String?  @db.NVarChar(100)
   last_name  String?  @db.NVarChar(100)
   
+  // 🚀 💡 จุดที่เพิ่มใหม่: ฟิลด์สิทธิ์การใช้งาน
+  role       String   @default("STAFF") @db.VarChar(20) // 'STAFF' หรือ 'MANAGER'
+
   // Standard Columns
   created_at DateTime @default(now())
   created_by BigInt?
-  updated_at DateTime @default(now()) @updatedAt // 🚀 แก้ไข: เพิ่ม default เพื่อรองรับข้อมูลเดิม
+  updated_at DateTime @default(now()) @updatedAt
   is_deleted Int      @default(0) @db.TinyInt 
 }
 
