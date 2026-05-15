@@ -3,7 +3,8 @@ import {
   LayoutDashboard, FilePlus, Users, Settings, LogOut, 
   TrendingUp, Bell, UserCircle, FileText 
 } from "lucide-react"; 
-import { auth } from "../../auth";
+// 🚀 เพิ่ม signOut เข้ามาใช้งานด้วยครับ
+import { auth, signOut } from "../../auth";
 
 export default async function ProtectedLayout({
   children,
@@ -14,7 +15,7 @@ export default async function ProtectedLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0b1120]">
-      {/* --- Sidebar (ครบทุกเมนูแล้ว!) --- */}
+      {/* --- Sidebar --- */}
       <aside className="w-64 bg-[#0f172a] border-r border-gray-800 flex flex-col z-20 shadow-2xl">
         {/* Branding Area */}
         <div className="h-16 flex items-center px-6 border-b border-gray-800 bg-[#0f172a]">
@@ -43,7 +44,6 @@ export default async function ProtectedLayout({
             <span className="font-bold text-sm">เพิ่มสัญญาใหม่</span>
           </Link>
           
-          {/* 🚀 เอากลับมาแล้ว! */}
           <Link href="/committees" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#EB005D]/10 hover:text-[#EB005D] transition-all group">
             <Users size={20} className="group-hover:scale-110 transition-transform" />
             <span className="font-bold text-sm">จัดการกรรมการ</span>
@@ -57,7 +57,6 @@ export default async function ProtectedLayout({
             <span className="font-bold text-sm">รายการแผนงาน</span>
           </Link>
 
-          {/* 🚀 เอากลับมาแล้ว! */}
           <p className="px-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mt-8 mb-2">Reports & Analysis</p>
           <Link href="/reports/budget" className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-[#EB005D]/10 hover:text-[#EB005D] transition-all group">
             <div className="p-1 bg-[#EB005D]/20 rounded-md">
@@ -74,7 +73,11 @@ export default async function ProtectedLayout({
             <span>ตั้งค่าระบบ</span>
           </Link>
           
-          <form action="/api/auth/signout" method="POST">
+          {/* 🚀 อัปเกรดปุ่ม Logout ให้ทำงานด้วย Server Action เตะกลับหน้า /login */}
+          <form action={async () => {
+            "use server"
+            await signOut({ redirectTo: "/login" });
+          }}>
             <button type="submit" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all text-sm font-bold">
               <LogOut size={18} />
               <span>ออกจากระบบ</span>
