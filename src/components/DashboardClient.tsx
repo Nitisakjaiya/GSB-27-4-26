@@ -42,7 +42,7 @@ export default function DashboardClient({ totalContracts, recentContracts, expir
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       
-      {/* --- ฝั่งซ้าย: ตารางสัญญาล่าสุด --- */}
+      {/* --- ฝั่งซ้าย: ตารางสัญญาล่าสุด (เปลี่ยนสีแล้ว) --- */}
       <div className="lg:col-span-2 space-y-8">
         <div className="bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] shadow-xl shadow-slate-200/50 overflow-hidden h-full">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
