@@ -151,9 +151,12 @@ export default async function DashboardPage() {
               </div>
             )}
           </div>
-          <Link href="/contracts" className="mt-6 w-full py-3 bg-pink-50 hover:bg-[#EB005D] text-[#EB005D] hover:text-white text-xs font-black uppercase tracking-widest rounded-xl text-center transition-colors">
-            View All Records
-          </Link>
+          <Link 
+  href="/logs" // 👈 เปลี่ยนตรงนี้เป็น /logs เรียบร้อยครับ!
+  className="mt-6 w-full py-3 bg-pink-50 hover:bg-[#EB005D] text-[#EB005D] hover:text-white text-xs font-black uppercase tracking-widest rounded-xl text-center transition-colors"
+>
+  View All Audit Logs
+</Link>
         </div>
       </div>
 
