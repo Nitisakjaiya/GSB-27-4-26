@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Users, Search, Plus, Edit3, Trash2, Filter, ShieldCheck, Link as LinkIcon } from "lucide-react";
 import { prisma } from "../../../lib/prisma"; // 💡 อย่าลืมเช็ก Path ของ prisma ให้ตรงนะครับ
+import DeleteCommitteeButton from "../../../components/DeleteCommitteeButton";
 
 export default async function CommitteesPage({
   searchParams,
@@ -149,9 +150,8 @@ export default async function CommitteesPage({
                           <Edit3 size={16} />
                         </Link>
                         {/* ปุ่มลบ (เดี๋ยวเราทำ Server Action มารองรับครับ) */}
-                        <button className="p-2.5 bg-slate-50 hover:bg-red-500 text-slate-500 hover:text-white rounded-xl transition-all shadow-sm border border-slate-100 hover:border-transparent" title="Delete">
-                          <Trash2 size={16} />
-                        </button>
+                        {/* ปุ่มลบที่ดึงมาจาก Client Component */}
+                        <DeleteCommitteeButton id={Number(person.cmit_aid)} />
                       </div>
                     </td>
                   </tr>
