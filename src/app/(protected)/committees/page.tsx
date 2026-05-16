@@ -1,15 +1,33 @@
 import Link from "next/link";
-import { Users, Search, Plus, Edit3, Trash2, Filter, ShieldCheck } from "lucide-react";
+import { Users, Search, Plus, Edit3, Trash2, Filter, ShieldCheck, Link as LinkIcon } from "lucide-react";
+import { prisma } from "../../../lib/prisma"; // 💡 อย่าลืมเช็ก Path ของ prisma ให้ตรงนะครับ
 
-export default async function CommitteesPage() {
-  // 💡 TODO: เปลี่ยนตรงนี้ให้ดึงข้อมูลจาก Database (Prisma) ของประธานนะครับ
-  // ตัวอย่าง: const committees = await prisma.tb_committee.findMany({...})
-  const mockCommittees = [
-    { id: "1", name: "นายสมชาย ใจดี", position: "ประธานกรรมการ", department: "ฝ่ายเทคโนโลยีสารสนเทศ", status: "ACTIVE" },
-    { id: "2", name: "นางสาวสมศรี เรียนรู้", position: "กรรมการ", department: "ฝ่ายบัญชีและการเงิน", status: "ACTIVE" },
-    { id: "3", name: "นายสมปอง สมหวัง", position: "กรรมการและเลขานุการ", department: "ฝ่ายบริหารทรัพยากรบุคคล", status: "ACTIVE" },
-    { id: "4", name: "นายสมศักดิ์ รักงาน", position: "กรรมการสำรอง", department: "ฝ่ายปฏิบัติการ", status: "INACTIVE" },
-  ];
+export default async function CommitteesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; type?: string }>;
+}) {
+  const { q, type } = await searchParams;
+  const searchQuery = q || "";
+  const typeFilter = type || "";
+
+  // 🚀 ดึงข้อมูล "ของจริง" จากตาราง tb_committees
+  const committees = await prisma.tb_committees.findMany({
+    where: {
+      is_deleted: 0,
+      // ระบบค้นหาจาก ชื่อ, ตำแหน่ง หรือ แผนก
+      ...(searchQuery && {
+        OR: [
+          { cmit_name: { contains: searchQuery } },
+          { cmit_position: { contains: searchQuery } },
+          { cmit_unit: { contains: searchQuery } },
+        ],
+      }),
+      // ระบบกรองประเภท (สัญญา หรือ แผนงาน)
+      ...(typeFilter && { base_type: typeFilter }),
+    },
+    orderBy: { created_at: "desc" }, // เรียงจากล่าสุดขึ้นก่อน
+  });
 
   return (
     <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-700 text-slate-800 space-y-8">
@@ -22,7 +40,7 @@ export default async function CommitteesPage() {
             Committee <span className="text-[#EB005D]">Management</span>
           </h1>
           <p className="text-slate-500 mt-1 font-medium tracking-widest text-[10px] uppercase">
-            ระบบบริหารจัดการรายชื่อคณะกรรมการ (พบข้อมูลทั้งหมด {mockCommittees.length} รายการ)
+            ระบบบริหารจัดการรายชื่อคณะกรรมการ (พบข้อมูลทั้งหมด {committees.length} รายการ)
           </p>
         </div>
         <Link href="/committees/new" className="flex items-center gap-2 bg-[#EB005D] hover:bg-pink-600 text-white px-6 py-3 rounded-xl transition-all font-black text-sm uppercase tracking-widest shadow-lg shadow-pink-500/30 active:scale-95">
@@ -30,7 +48,7 @@ export default async function CommitteesPage() {
         </Link>
       </div>
 
-      {/* --- กล่องค้นหา (Search & Filter) ขาวสว่าง --- */}
+      {/* --- กล่องค้นหา (Search & Filter) --- */}
       <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-white shadow-sm">
         <form className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
@@ -38,27 +56,38 @@ export default async function CommitteesPage() {
             <input 
               type="text" 
               name="q" 
-              placeholder="ค้นหาชื่อกรรมการ หรือ แผนก..." 
+              defaultValue={searchQuery}
+              placeholder="ค้นหาชื่อกรรมการ ตำแหน่ง หรือ แผนก..." 
               className="w-full bg-white border border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-800 focus:border-[#EB005D] focus:ring-1 focus:ring-[#EB005D] outline-none transition-all text-sm shadow-inner" 
             />
           </div>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><Filter size={16} /></div>
-            <select name="status" className="w-full md:w-48 bg-white border border-slate-200 rounded-xl pl-10 pr-10 py-3 text-slate-800 focus:border-[#EB005D] outline-none transition-all text-sm appearance-none cursor-pointer shadow-inner font-bold">
-              <option value="">ทุกสถานะ (All)</option>
-              <option value="ACTIVE">ACTIVE (ปฏิบัติงาน)</option>
-              <option value="INACTIVE">INACTIVE (พ้นสภาพ)</option>
+            <select 
+              name="type" 
+              defaultValue={typeFilter}
+              className="w-full md:w-64 bg-white border border-slate-200 rounded-xl pl-10 pr-10 py-3 text-slate-800 focus:border-[#EB005D] outline-none transition-all text-sm appearance-none cursor-pointer shadow-inner font-bold"
+            >
+              <option value="">ทุกสังกัด (All)</option>
+              <option value="CON">สังกัด สัญญา (Contract)</option>
+              <option value="PLAN">สังกัด แผนงาน (Planning)</option>
             </select>
           </div>
           <button type="submit" className="bg-slate-800 hover:bg-[#EB005D] text-white px-8 py-3 rounded-xl transition-all font-bold text-xs uppercase tracking-widest shadow-md">
             ค้นหา
           </button>
+          
+          {/* ปุ่มล้างค่าการค้นหา */}
+          {(searchQuery || typeFilter) && (
+            <Link href="/committees" className="flex items-center justify-center bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 px-6 py-3 rounded-xl transition-all font-bold text-xs uppercase tracking-widest border border-slate-200">
+              ล้างค่า
+            </Link>
+          )}
         </form>
       </div>
 
       {/* --- ตารางข้อมูลสีสว่าง (GSB Theme) --- */}
       <div className="bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] shadow-xl shadow-slate-200/50 overflow-hidden relative">
-        {/* แถบสีชมพูด้านบนกล่อง */}
         <div className="h-1.5 w-full bg-gradient-to-r from-[#EB005D] to-pink-400"></div>
         
         <div className="overflow-x-auto">
@@ -68,54 +97,58 @@ export default async function CommitteesPage() {
                 <th className="px-8 py-5">Committee Name</th>
                 <th className="px-8 py-5">Position</th>
                 <th className="px-8 py-5">Department</th>
-                <th className="px-8 py-5 text-center">Status</th>
+                <th className="px-8 py-5 text-center">Type / Base ID</th>
                 <th className="px-8 py-5 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {mockCommittees.length === 0 ? (
+              {committees.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-8 py-24 text-center">
                     <div className="inline-flex flex-col items-center justify-center opacity-50">
                       <Users size={48} className="text-slate-400 mb-4" />
                       <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">No Committees Found</p>
+                      <p className="text-slate-400 text-[10px] mt-1">ยังไม่มีข้อมูลคณะกรรมการในระบบ</p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                mockCommittees.map((person) => (
-                  <tr key={person.id} className="hover:bg-slate-50 transition-colors group">
+                committees.map((person) => (
+                  <tr key={person.cmit_aid.toString()} className="hover:bg-slate-50 transition-colors group">
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-pink-50 border border-pink-100 flex items-center justify-center text-[#EB005D] font-black shadow-sm">
-                          {person.name.charAt(1)}
+                          {person.cmit_name ? person.cmit_name.charAt(0) : "?"}
                         </div>
-                        <span className="font-bold text-slate-800">{person.name}</span>
+                        <span className="font-bold text-slate-800">{person.cmit_name}</span>
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      <div className="flex items-center gap-2 text-slate-700 font-medium">
-                        <ShieldCheck size={14} className={person.position.includes("ประธาน") ? "text-[#EB005D]" : "text-slate-400"} />
-                        {person.position}
+                      <div className="flex items-center gap-2 text-slate-700 font-medium text-xs">
+                        <ShieldCheck size={14} className={person.cmit_position?.includes("ประธาน") ? "text-[#EB005D]" : "text-slate-400"} />
+                        {person.cmit_position || "-"}
                       </div>
                     </td>
                     <td className="px-8 py-5 text-slate-500 text-xs font-bold">
-                      {person.department}
+                      {person.cmit_unit || "-"}
                     </td>
                     <td className="px-8 py-5 text-center">
-                      <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                        person.status === 'ACTIVE' 
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest ${
+                        person.base_type === 'CON' 
                         ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-                        : 'bg-slate-100 text-slate-500 border border-slate-200'
+                        : 'bg-blue-50 text-blue-600 border border-blue-100'
                       }`}>
-                        {person.status}
+                        <LinkIcon size={10} />
+                        {person.base_type === 'CON' ? 'สัญญา' : 'แผนงาน'} (ID: {person.base_id.toString()})
                       </span>
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex items-center justify-center gap-2">
-                        <Link href={`/committees/${person.id}/edit`} className="p-2.5 bg-slate-50 hover:bg-amber-500 text-slate-500 hover:text-white rounded-xl transition-all shadow-sm border border-slate-100 hover:border-transparent" title="Edit">
+                        {/* ลิงก์ไปหน้าแก้ไข (เดี๋ยวเราค่อยทำกันครับ) */}
+                        <Link href={`/committees/${person.cmit_aid}/edit`} className="p-2.5 bg-slate-50 hover:bg-amber-500 text-slate-500 hover:text-white rounded-xl transition-all shadow-sm border border-slate-100 hover:border-transparent" title="Edit">
                           <Edit3 size={16} />
                         </Link>
+                        {/* ปุ่มลบ (เดี๋ยวเราทำ Server Action มารองรับครับ) */}
                         <button className="p-2.5 bg-slate-50 hover:bg-red-500 text-slate-500 hover:text-white rounded-xl transition-all shadow-sm border border-slate-100 hover:border-transparent" title="Delete">
                           <Trash2 size={16} />
                         </button>
