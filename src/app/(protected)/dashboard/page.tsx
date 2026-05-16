@@ -68,9 +68,9 @@ export default async function DashboardPage() {
           <div className="relative z-10">
             <p className="text-[10px] text-blue-500 font-black uppercase tracking-[0.2em] mb-2">Total Contracts</p>
             <h2 className="text-5xl font-black text-slate-800 tracking-tighter mb-4">{totalContracts}</h2>
-            <Link href="/contracts" className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-blue-500 font-bold transition-colors">
-              จัดการสัญญา <ArrowRight size={14} />
-            </Link>
+            <Link href="/logs" className="mt-6 w-full py-3 bg-pink-50 hover:bg-[#EB005D] text-[#EB005D] hover:text-white text-xs font-black uppercase tracking-widest rounded-xl text-center transition-colors">
+  View All Audit Logs
+</Link>
           </div>
         </div>
 
