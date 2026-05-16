@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, Title, DonutChart, Legend, BarChart } from "@tremor/react";
+import { DonutChart, Legend, BarChart } from "@tremor/react";
 
 interface ChartProps {
   statusData: { name: string; value: number }[];
@@ -14,12 +14,12 @@ export default function DashboardCharts({ statusData, budgetData }: ChartProps) 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
       
-      {/* 1. กราฟโดนัท */}
-      <Card className="bg-white/80 backdrop-blur-xl border-white ring-0 shadow-xl shadow-slate-200/50 rounded-[2rem] hover:border-[#EB005D]/30 transition-all duration-300">
-        <Title className="text-slate-800 font-black italic uppercase tracking-widest mb-6 text-center flex items-center justify-center gap-2">
+      {/* 1. กราฟโดนัท (เปลี่ยนจาก Card เป็น div ธรรมดา) */}
+      <div className="bg-white/90 backdrop-blur-xl border border-slate-100 shadow-xl shadow-slate-200/50 rounded-[2rem] p-6 hover:border-[#EB005D]/30 transition-all duration-300">
+        <h3 className="text-slate-800 font-black italic uppercase tracking-widest mb-6 text-center flex items-center justify-center gap-2">
           <span className="w-2 h-2 bg-[#EB005D] rounded-full"></span>
           Contract Status <span className="text-[#EB005D]">Distribution</span>
-        </Title>
+        </h3>
         
         <div className="flex flex-col items-center justify-center gap-6">
           <DonutChart
@@ -33,17 +33,17 @@ export default function DashboardCharts({ statusData, budgetData }: ChartProps) 
           <Legend
             categories={statusData.map(d => d.name)}
             colors={["emerald", "amber", "rose", "blue", "slate"]}
-            className="mt-2 font-bold"
+            className="mt-2 font-bold text-slate-500"
           />
         </div>
-      </Card>
+      </div>
 
-      {/* 2. กราฟแท่ง */}
-      <Card className="bg-white/80 backdrop-blur-xl border-white ring-0 shadow-xl shadow-slate-200/50 rounded-[2rem] hover:border-emerald-500/30 transition-all duration-300">
-         <Title className="text-slate-800 font-black italic uppercase tracking-widest mb-6 text-center flex items-center justify-center gap-2">
+      {/* 2. กราฟแท่ง (เปลี่ยนจาก Card เป็น div ธรรมดา) */}
+      <div className="bg-white/90 backdrop-blur-xl border border-slate-100 shadow-xl shadow-slate-200/50 rounded-[2rem] p-6 hover:border-emerald-500/30 transition-all duration-300">
+         <h3 className="text-slate-800 font-black italic uppercase tracking-widest mb-6 text-center flex items-center justify-center gap-2">
            <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
            Budget <span className="text-emerald-500">Allocation</span>
-         </Title>
+         </h3>
          
          <div className="pt-4">
            {budgetData.length === 0 ? (
@@ -61,7 +61,7 @@ export default function DashboardCharts({ statusData, budgetData }: ChartProps) 
              />
            )}
          </div>
-      </Card>
+      </div>
     </div>
   );
 }
